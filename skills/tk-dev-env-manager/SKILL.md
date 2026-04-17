@@ -39,6 +39,8 @@ Windows、Linux、macOS，有无 bash、Python、PowerShell 都不确定。
 
 **禁止擅自行动。** 未经用户确认，不执行下载、安装、修改配置等操作。
 
+**强制配置文件创建。** 无论如何都必须创建 `.claude/project-env/.env` 和 `.claude/project-env/.description` 这两个文件。这是本技能的强制要求，即使环境检测通过也必须创建，用于记录环境配置信息和说明文档。
+
 **善用已有 skill。** 检查当前环境中是否有可辅助的 skill（如 tk-springboot-dev-standards、tk-vue3-dev-standards 等），在合适的阶段使用它们。
 
 **尊重项目现有配置。** 如果项目已有 `.tool-versions`、`.node-version`、`.python-version` 等版本固定文件，优先使用其中的版本。
@@ -406,6 +408,8 @@ PYTHON_HOME=C:/Users/xxx/.pyenv/versions/3.12.8
 ## E4: 环境配置引导
 
 当检测到环境缺失时，自动创建配置目录和文件，然后引导用户完成配置。
+
+**强制要求**：无论如何都必须创建 `.claude/project-env/.env` 和 `.claude/project-env/.description` 这两个文件。即使环境检测全部通过（所有工具就绪），也必须创建这两个文件用于记录配置信息和说明文档。
 
 ### 步骤
 
