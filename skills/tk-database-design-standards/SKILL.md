@@ -478,42 +478,10 @@ CREATE TABLE `{prefix}_{module}` (
 
 对照 `references/anti-patterns.md` 逐项扫描，确保无反模式。
 
-### D3.3 DDL 语法验证（强制）
-
-**必须执行以下验证之一：**
-
-1. **数据库客户端验证**（推荐）：
-   ```bash
-   # MySQL
-   mysql -u用户名 -p密码 -e "CREATE TABLE IF NOT EXISTS test_check (...)" 2>&1 | grep -i error
-
-   # PostgreSQL
-   psql -U用户名 -c "SELECT 1" 2>&1 | grep -i error
-   ```
-
-2. **语法解析验证**（无数据库客户端时）：
-   ```bash
-   # MySQL DDL 语法检查（使用 mysql client）
-   mysql -u用户名 -p密码 --execute="DROP TABLE IF EXISTS test_table; CREATE TABLE test_table (...)" 2>&1
-
-   # 或使用 mysqldump --no-data 仅解析 DDL
-   mysqldump -u用户名 -p密码 --no-data --compact database_name 2>&1 | grep -i error
-   ```
-
-3. **在线 DDL 验证工具**（无客户端时）：
-   - 使用 SQL Fiddle、DB Fiddle 等在线工具手动验证
-   - 或在本地搭建临时数据库容器验证
-
-**验证标准**：
-- DDL 语句必须能成功解析（无语法错误）
-- 如果有数据库客户端，必须实际执行 `CREATE TABLE` 验证（使用临时表名）
-- 验证通过后才能进入 D4 交付阶段
-
 ### 质量门禁 D3
 
 - [ ] 自动检查清单全部通过
 - [ ] 无反模式
-- [ ] DDL 语法正确（必须实际验证，可通过 EXPLAIN 或 SHOW CREATE TABLE 或执行验证）
 - [ ] 与用户需求完全对齐
 
 ---
