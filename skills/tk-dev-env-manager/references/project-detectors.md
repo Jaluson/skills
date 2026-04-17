@@ -1,3 +1,10 @@
+---
+name: tk-dev-env-manager-references
+description: >
+  tk-dev-env-manager 的参考文档 — 定义各项目类型的环境检测规则。
+  包括标志性文件、版本解析方法和所需环境变量。
+---
+
 # 项目类型检测详细规则
 
 本文档定义了各项目类型的环境检测规则，包括标志性文件、版本解析方法和所需环境变量。
@@ -39,7 +46,7 @@
 **Maven 版本** — 从 wrapper 获取（如有）：
 ```properties
 # .mvn/wrapper/maven-wrapper.properties
-distributionUrl=https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.6/apache-maven-3.9.6-bin.zip
+distributionUrl=https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.9/apache-maven-3.9.9-bin.zip
 ```
 
 **Spring Boot 版本**（辅助信息）：
@@ -47,14 +54,14 @@ distributionUrl=https://repo.maven.apache.org/maven2/org/apache/maven/apache-mav
 <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>3.2.1</version>
+    <version>3.4.4</version>
 </parent>
 
 <!-- 或直接依赖 -->
 <dependency>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter</artifactId>
-    <version>3.2.1</version>
+    <version>3.4.4</version>
 </dependency>
 ```
 
@@ -120,14 +127,14 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
 **Gradle 版本** — 从 wrapper 获取：
 ```properties
 # gradle/wrapper/gradle-wrapper.properties
-distributionUrl=https\://services.gradle.org/distributions/gradle-8.5-bin.zip
+distributionUrl=https\://services.gradle.org/distributions/gradle-8.13-bin.zip
 ```
 
 **Kotlin 版本**（辅助信息）：
 ```kotlin
 // build.gradle.kts
 plugins {
-    kotlin("jvm") version "1.9.22"
+    kotlin("jvm") version "2.0.21"
 }
 ```
 
@@ -288,7 +295,7 @@ python_requires = >=3.10
 
 ```
 # .python-version
-3.12.1
+3.12.8
 ```
 
 **包管理器** — 通过配置文件判断：
@@ -395,7 +402,7 @@ cargo test                   # 测试
 // global.json
 {
   "sdk": {
-    "version": "8.0.100"
+    "version": "8.0.404"
   }
 }
 ```
@@ -598,11 +605,11 @@ project/
 # 常见版本输出格式
 java version "17.0.9" 2024-01-16       → 17.0.9
 openjdk version "17.0.9"               → 17.0.9
-v20.11.0                                → 20.11.0
-Python 3.12.1                           → 3.12.1
-go version go1.21.6 linux/amd64        → 1.21.6
+v22.14.0                                → 22.14.0
+Python 3.12.8                           → 3.12.8
+go version go1.23.4 linux/amd64        → 1.23.4
 rustc 1.75.0 (82e1608df)               → 1.75.0
-dotnet 8.0.100                          → 8.0.100
+dotnet 8.0.404                          → 8.0.404
 ```
 
 ### 比较规则

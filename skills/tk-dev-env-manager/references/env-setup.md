@@ -117,16 +117,16 @@ curl -L "https://api.adoptium.net/v3/binary/latest/17/ga/mac/x64/jdk/hotspot/nor
    unzip runtime-env/tmp/jdk17.zip -d runtime-env/tmp/jdk-extracted/
    mv runtime-env/tmp/jdk-extracted/jdk-17.* runtime-env/jdk/
    ```
-3. 验证: `runtime-env/jdk/bin/java -version`
+3. 验证: `runtime-env/jdk/bin/java -version 2>&1 | head -1`
 4. 更新 .env
 
 ### 版本映射
 根据 pom.xml/build.gradle 中提取的版本号：
 - `8` → JDK 8 (旧版 LTS，已逐步退出主流)
 - `11` → JDK 11 (LTS)
-- `17` → JDK 17 (LTS，当前最广泛使用)
-- `21` → JDK 21 (LTS)
-- `25` → JDK 25 (即将到来的 LTS，预计 2025-09 发布)
+- `17` → JDK 17 (LTS)
+- `21` → JDK 21 (LTS，当前最广泛使用)
+- `25` → JDK 25 (LTS，已于 2025-03 发布)
 
 ---
 
@@ -136,15 +136,15 @@ curl -L "https://api.adoptium.net/v3/binary/latest/17/ga/mac/x64/jdk/hotspot/nor
 ```bash
 # 从 Apache 官方下载
 # Linux / macOS
-curl -L "https://dlcdn.apache.org/maven/maven-3/3.9.6/binaries/apache-maven-3.9.6-bin.tar.gz" \
+curl -L "https://dlcdn.apache.org/maven/maven-3/3.9.9/binaries/apache-maven-3.9.9-bin.tar.gz" \
   -o maven.tar.gz
 
 # Windows（使用 .zip 格式）
-curl -L "https://dlcdn.apache.org/maven/maven-3/3.9.6/binaries/apache-maven-3.9.6-bin.zip" \
+curl -L "https://dlcdn.apache.org/maven/maven-3/3.9.9/binaries/apache-maven-3.9.9-bin.zip" \
   -o maven.zip
 
 # 或使用镜像
-curl -L "https://mirrors.tuna.tsinghua.edu.cn/apache/maven/maven-3/3.9.6/binaries/apache-maven-3.9.6-bin.tar.gz" \
+curl -L "https://mirrors.tuna.tsinghua.edu.cn/apache/maven/maven-3/3.9.9/binaries/apache-maven-3.9.9-bin.tar.gz" \
   -o maven.tar.gz
 ```
 
@@ -166,7 +166,7 @@ curl -L "https://mirrors.tuna.tsinghua.edu.cn/apache/maven/maven-3/3.9.6/binarie
 ### 下载方式
 ```bash
 # 从 Gradle 官方下载
-curl -L "https://services.gradle.org/distributions/gradle-8.5-bin.zip" \
+curl -L "https://services.gradle.org/distributions/gradle-8.13-bin.zip" \
   -o gradle.zip
 ```
 
@@ -195,20 +195,20 @@ curl -L "https://services.gradle.org/distributions/gradle-8.5-bin.zip" \
 
 ### 下载方式
 ```bash
-# 官方二进制包（示例: Node 20.11.0 for Windows x64）
-curl -L "https://nodejs.org/dist/v20.11.0/node-v20.11.0-win-x64.zip" \
+# 官方二进制包（示例: Node 22.14.0 for Windows x64）
+curl -L "https://nodejs.org/dist/v22.14.0/node-v22.14.0-win-x64.zip" \
   -o node.zip
 
 # Linux
-curl -L "https://nodejs.org/dist/v20.11.0/node-v20.11.0-linux-x64.tar.xz" \
+curl -L "https://nodejs.org/dist/v22.14.0/node-v22.14.0-linux-x64.tar.xz" \
   -o node.tar.xz
 
 # macOS
-curl -L "https://nodejs.org/dist/v20.11.0/node-v20.11.0-darwin-x64.tar.gz" \
+curl -L "https://nodejs.org/dist/v22.14.0/node-v22.14.0-darwin-x64.tar.gz" \
   -o node.tar.gz
 
 # 国内镜像
-curl -L "https://npmmirror.com/mirrors/node/v20.11.0/node-v20.11.0-win-x64.zip" \
+curl -L "https://npmmirror.com/mirrors/node/v22.14.0/node-v22.14.0-win-x64.zip" \
   -o node.zip
 ```
 
@@ -230,10 +230,14 @@ curl -L "https://npmmirror.com/mirrors/node/v20.11.0/node-v20.11.0-win-x64.zip" 
 
 ### 下载方式
 ```bash
-# 通过 npm 全局安装（需要先有 Node）
+# 方案 1：通过 corepack 启用（Node 16.13+ 自带）
+corepack enable
+corepack prepare pnpm@latest --activate
+
+# 方案 2：通过 npm 全局安装（需要先有 Node）
 npm install -g pnpm@8.15.1
 
-# 或通过独立安装脚本
+# 方案 3：通过独立安装脚本
 # Unix-like
 curl -fsSL https://get.pnpm.io/install.sh | sh -
 
@@ -324,8 +328,8 @@ curl -L "https://github.com/denoland/deno/releases/latest/download/deno-x86_64-p
 
 ### 下载方式
 ```bash
-# CPython 官方（示例: Python 3.12.1 for Windows）
-curl -L "https://www.python.org/ftp/python/3.12.1/python-3.12.1-embed-amd64.zip" \
+# CPython 官方（示例: Python 3.12.8 for Windows）
+curl -L "https://www.python.org/ftp/python/3.12.8/python-3.12.8-embed-amd64.zip" \
   -o python.zip
 
 # Miniconda
@@ -333,7 +337,7 @@ curl -L "https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.ex
   -o miniconda.exe
 
 # Linux
-curl -L "https://www.python.org/ftp/python/3.12.1/Python-3.12.1.tgz" \
+curl -L "https://www.python.org/ftp/python/3.12.8/Python-3.12.8.tgz" \
   -o python.tgz
 ```
 
@@ -347,7 +351,7 @@ curl -L "https://www.python.org/ftp/python/3.12.1/Python-3.12.1.tgz" \
 
 > ⚠️ embeddable 包缺少 pip/venv 等标准工具，**推荐开发环境优先使用 Miniconda 或官方安装包**。
 
-1. 下载 `python-3.12.1-embed-amd64.zip` 到 `runtime-env/tmp/`
+1. 下载 `python-3.12.8-embed-amd64.zip` 到 `runtime-env/tmp/`
 2. 解压到 `runtime-env/python/`
 3. **修改 `._pth` 文件以启用 site-packages**：
    ```
@@ -371,18 +375,18 @@ curl -L "https://www.python.org/ftp/python/3.12.1/Python-3.12.1.tgz" \
 
 ### 下载方式
 ```bash
-# 官方下载（示例: Go 1.21.6 for Windows amd64）
-curl -L "https://go.dev/dl/go1.21.6.windows-amd64.zip" \
+# 官方下载（示例: Go 1.23.4 for Windows amd64）
+curl -L "https://go.dev/dl/go1.23.4.windows-amd64.zip" \
   -o go.zip
 
 # Linux
-curl -L "https://go.dev/dl/go1.21.6.linux-amd64.tar.gz" \
+curl -L "https://go.dev/dl/go1.23.4.linux-amd64.tar.gz" \
   -o go.tar.gz
 
 # 国内镜像
-curl -L "https://mirrors.aliyun.com/golang/go1.21.6.windows-amd64.zip" \
+curl -L "https://mirrors.aliyun.com/golang/go1.23.4.windows-amd64.zip" \
   -o go.zip
-curl -L "https://golang.google.cn/dl/go1.21.6.windows-amd64.zip" \
+curl -L "https://golang.google.cn/dl/go1.23.4.windows-amd64.zip" \
   -o go.zip
 ```
 
@@ -560,6 +564,11 @@ asdf list 2>/dev/null
 
 **npm registry：**
 - 淘宝镜像：`https://registry.npmmirror.com/`
+
+**Docker registry：**
+- 阿里云镜像：`https://mirror.ccs.tencentyun.com`
+- 网易镜像：`https://hub-mirror.c.163.com`
+- Docker 官方镜像：`https://registry.docker-cn.com`
 
 ### 离线环境
 如果完全无法联网：

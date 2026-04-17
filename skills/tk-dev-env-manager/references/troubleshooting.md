@@ -1,3 +1,10 @@
+---
+name: tk-dev-env-manager-references
+description: >
+  tk-dev-env-manager 的参考文档 — 环境故障排查指南。
+  列出了开发环境检测和配置过程中的常见问题及解决方法。
+---
+
 # 环境故障排查指南
 
 本文档列出了开发环境检测和配置过程中的常见问题，以及对应的排查和解决方法。

@@ -589,12 +589,49 @@ pnpm run dev
 # 记录当前状态，确保可以回退
 git stash list    # 检查是否有未保存的改动
 git status        # 确认工作区状态
+git diff          # 查看具体变更内容
 ```
 
 如果发现工作区有未提交的改动：
 - 提醒用户"当前有未提交的改动，建议先 stash 或 commit"
 - 不主动 stash 用户的改动
 - 等用户处理后再继续
+
+### 分支操作命令
+
+```bash
+# 查看当前分支
+git branch        # 列出本地分支，* 表示当前分支
+git branch -vv    # 查看分支详细信息（含上游分支）
+
+# 创建功能分支（仅在用户明确要求时执行）
+git checkout -b feat/{功能名称}     # 创建并切换到新分支
+git checkout -b fix/{问题描述}     # 创建修复分支
+
+# 切换分支（仅在用户明确要求时执行）
+git checkout {分支名}              # 切换到已有分支
+```
+
+### 提交命令
+
+```bash
+# 查看将要提交的内容
+git diff --cached    # 查看已暂存的变更（git add 后）
+git diff            # 查看未暂存的变更
+
+# 暂存文件
+git add {文件路径}      # 暂存单个文件
+git add src/views/     # 暂存整个目录
+git add -A            # 暂存所有变更（包含新增、修改、删除）
+
+# 提交变更
+git commit -m "feat: {简述做了什么}"           # 提交并写 message
+git commit -m "fix: {修复的问题}"               # 修复类提交
+git commit -m "chore: {微调内容}"               # 杂项提交
+
+# 提交时查看历史记录（了解提交风格）
+git log --oneline -10   # 查看最近10条提交
+```
 
 ### 交付时的 Git 信息
 

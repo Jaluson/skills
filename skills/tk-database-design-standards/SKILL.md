@@ -56,6 +56,14 @@ description: >
 - **修改表**：表名称、修改内容（原结构 → 新结构）、数据迁移方案（如有）
 - **删除表**：表名称、删除原因、对现有数据的影响
 
+**铁律六：允许并行 Agent 加速。** 在 D0-D3 阶段中，当任务涉及多个表或多项检测时，允许启用最多 5 个子 agent 并行执行以加速任务：
+- D0 阶段：多个表的现有结构扫描可以并行
+- D1 阶段：多个表的方案设计可以并行
+- D2 阶段：多个表的 DDL 编写可以并行
+- D3 阶段：多个表的验证审查可以并行
+
+子 agent 必须有明确的输入、输出和职责边界，只负责只读操作（扫描/检测）或指定任务的执行，不负责写操作（编码/修改文件）之外的决策。
+
 示例格式：
 ```
 【数据库变更清单】
@@ -470,11 +478,42 @@ CREATE TABLE `{prefix}_{module}` (
 
 对照 `references/anti-patterns.md` 逐项扫描，确保无反模式。
 
+### D3.3 DDL 语法验证（强制）
+
+**必须执行以下验证之一：**
+
+1. **数据库客户端验证**（推荐）：
+   ```bash
+   # MySQL
+   mysql -u用户名 -p密码 -e "CREATE TABLE IF NOT EXISTS test_check (...)" 2>&1 | grep -i error
+
+   # PostgreSQL
+   psql -U用户名 -c "SELECT 1" 2>&1 | grep -i error
+   ```
+
+2. **语法解析验证**（无数据库客户端时）：
+   ```bash
+   # MySQL DDL 语法检查（使用 mysql client）
+   mysql -u用户名 -p密码 --execute="DROP TABLE IF EXISTS test_table; CREATE TABLE test_table (...)" 2>&1
+
+   # 或使用 mysqldump --no-data 仅解析 DDL
+   mysqldump -u用户名 -p密码 --no-data --compact database_name 2>&1 | grep -i error
+   ```
+
+3. **在线 DDL 验证工具**（无客户端时）：
+   - 使用 SQL Fiddle、DB Fiddle 等在线工具手动验证
+   - 或在本地搭建临时数据库容器验证
+
+**验证标准**：
+- DDL 语句必须能成功解析（无语法错误）
+- 如果有数据库客户端，必须实际执行 `CREATE TABLE` 验证（使用临时表名）
+- 验证通过后才能进入 D4 交付阶段
+
 ### 质量门禁 D3
 
 - [ ] 自动检查清单全部通过
 - [ ] 无反模式
-- [ ] DDL 语法正确（可通过 `EXPLAIN` 或 `SHOW CREATE TABLE` 验证）
+- [ ] DDL 语法正确（必须实际验证，可通过 EXPLAIN 或 SHOW CREATE TABLE 或执行验证）
 - [ ] 与用户需求完全对齐
 
 ---
@@ -524,7 +563,7 @@ CREATE TABLE `{prefix}_{module}` (
    └── 数据迁移方案（如需要）
 ```
 
-### D4.2 交付确认
+### D4.3 交付确认
 
 向用户展示最终结果，包含：
 
