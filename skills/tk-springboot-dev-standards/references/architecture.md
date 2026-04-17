@@ -820,7 +820,7 @@ public class AppConfig {
 ## 数据库设计规范
 
 > **注意**：完整的数据库设计规范（含字段类型选择、索引设计、SQL 标准、反模式清单）请参考
-> `database-design-standards` skill 的参考文档：`data-types.md`、`index-design.md`、
+> `tk-database-design-standards` skill 的参考文档：`data-types.md`、`index-design.md`、
 > `sql-standards.md`、`anti-patterns.md`。以下为本文件保留的 Spring Boot 项目特有规范摘要。
 
 ### 表命名

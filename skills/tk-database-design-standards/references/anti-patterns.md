@@ -1041,4 +1041,4 @@ CREATE TABLE `biz_user` (
 
 ---
 
-> **使用说明**：本文件是 database-design-standards skill 的 D3 阶段参考文档。AI 在 D3.2 反模式扫描时，应逐项对照检查所有设计决策，发现反模式后需修复至通过才能进入 D4 交付阶段。
+> **使用说明**：本文件是 tk-database-design-standards skill 的 D3 阶段参考文档。AI 在 D3.2 反模式扫描时，应逐项对照检查所有设计决策，发现反模式后需修复至通过才能进入 D4 交付阶段。

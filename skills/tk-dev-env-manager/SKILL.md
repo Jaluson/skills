@@ -1,5 +1,5 @@
 ---
-name: dev-env-manager
+name: tk-dev-env-manager
 description: >
   开发环境感知管理器 — 在任何开发任务开始前自动检测、配置和管理项目所需的运行时环境。
   当用户要求执行构建、运行、测试、打包等开发任务时，或者当其他 skill 需要确定正确的
@@ -11,7 +11,7 @@ description: >
   本 skill 不依赖任何脚本或特定运行时，所有检测均通过读取文件内容和系统原生命令完成。
 ---
 
-# 开发环境感知管理器 (dev-env-manager)
+# 开发环境感知管理器 (tk-dev-env-manager)
 
 ## 这个 skill 解决什么问题
 
@@ -39,7 +39,7 @@ Windows、Linux、macOS，有无 bash、Python、PowerShell 都不确定。
 
 **禁止擅自行动。** 未经用户确认，不执行下载、安装、修改配置等操作。
 
-**善用已有 skill。** 检查当前环境中是否有可辅助的 skill（如 springboot-dev-standards、vue3-dev-standards 等），在合适的阶段使用它们。
+**善用已有 skill。** 检查当前环境中是否有可辅助的 skill（如 tk-springboot-dev-standards、tk-vue3-dev-standards 等），在合适的阶段使用它们。
 
 **尊重项目现有配置。** 如果项目已有 `.tool-versions`、`.node-version`、`.python-version` 等版本固定文件，优先使用其中的版本。
 
@@ -501,7 +501,7 @@ export PATH="$JAVA_HOME/bin:$MAVEN_HOME/bin:$PATH"
 
 ## 作为其他 skill 的基础层
 
-其他 skill（如 springboot-dev-standards、vue3-dev-standards 等）在执行构建、运行等任务时，
+其他 skill（如 tk-springboot-dev-standards、tk-vue3-dev-standards 等）在执行构建、运行等任务时，
 可以通过本 skill 获取正确的环境变量。
 
 ### 使用方式
@@ -619,8 +619,8 @@ npm 的 `npx` 等，优先使用包装器而不要求全局安装。
 
 本 skill 作为环境基础层，应该在以下 skill 执行之前被调用：
 
-- `springboot-dev-standards` — 需要 JDK/Maven/Gradle 环境
-- `vue3-dev-standards` — 需要 Node/npm 环境
+- `tk-springboot-dev-standards` — 需要 JDK/Maven/Gradle 环境
+- `tk-vue3-dev-standards` — 需要 Node/npm 环境
 - `spring-boot-testing` — 需要 JDK 和测试运行时
 - `javascript-typescript-jest` — 需要 Node 环境
 - `python-mcp-server-generator` — 需要 Python 环境
@@ -629,9 +629,9 @@ npm 的 `npx` 等，优先使用包装器而不要求全局安装。
 - `rust-mcp-server-generator` — 需要 Rust 环境
 - 其他任何涉及构建、运行、测试的 skill
 
-### 上游 Skill：dev-task-precheck
+### 上游 Skill：tk-dev-task-precheck
 
-`dev-task-precheck`（开发任务前置守门员）在 T2 环境就绪检查阶段会委托本 skill
-完成环境检测和配置。当被 `dev-task-precheck` 调用时，可以跳过 E0（项目类型检测）
-和 E1（环境需求解析），因为 `dev-task-precheck` 的 T1 阶段已经完成了这些工作，
+`tk-dev-task-precheck`（开发任务前置守门员）在 T2 环境就绪检查阶段会委托本 skill
+完成环境检测和配置。当被 `tk-dev-task-precheck` 调用时，可以跳过 E0（项目类型检测）
+和 E1（环境需求解析），因为 `tk-dev-task-precheck` 的 T1 阶段已经完成了这些工作，
 直接从 E2（配置文件读取）开始执行即可。

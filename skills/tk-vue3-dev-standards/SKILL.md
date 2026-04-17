@@ -1,5 +1,5 @@
 ---
-name: vue3-dev-standards
+name: tk-vue3-dev-standards
 description: >
   Vue 3 工程标准化开发规范 — AI 全自动执行流水线。当用户要求开发 Vue 3 功能、创建组件、
   设计页面、重构 Vue 代码、搭建 Vue 项目架构、编写 composables 或 hooks、实现状态管理、
@@ -52,9 +52,9 @@ description: >
 **铁律三：动手前检查，有没有相关 skill 可以辅助。**
 在进入编码之前，检查当前环境是否有可用的相关 skill（如代码审查、测试、
 部署等）。如果有，在合适的阶段主动使用它们，而不是全部手动处理。
-特别注意：如果存在 `dev-task-precheck` skill，编码任务应优先通过它作为入口，
+特别注意：如果存在 `tk-dev-task-precheck` skill，编码任务应优先通过它作为入口，
 由它完成前置分析后再交接给本 skill，而非直接触发本 skill。
-如果本 skill 是被 `dev-task-precheck` 交接触发的，接收交接包中的预扫描结果
+如果本 skill 是被 `tk-dev-task-precheck` 交接触发的，接收交接包中的预扫描结果
 作为参考输入，但本 skill 的 P0 深度阅读阶段仍然是强制的，不可跳过。
 
 ### 流程降级机制
@@ -903,10 +903,10 @@ npm run preview
 在执行任务的过程中，应主动检查当前环境中是否有可用的辅助 skill，
 并在合适的阶段使用它们，而不是全部手动处理。
 
-### 上游 Skill：dev-task-precheck
+### 上游 Skill：tk-dev-task-precheck
 
-本 skill 支持被 `dev-task-precheck`（开发任务前置守门员）作为下游 skill 调用。
-当通过 `dev-task-precheck` 交接触发时：
+本 skill 支持被 `tk-dev-task-precheck`（开发任务前置守门员）作为下游 skill 调用。
+当通过 `tk-dev-task-precheck` 交接触发时：
 - 交接包中的项目技术栈快照、目录结构概览、资源盘点可作为 P0 阶段的参考输入
 - 但 P0 的深度阅读（逐行理解目标区域代码）仍然是强制的，不可跳过
 - P0 的用户确认点仍然需要执行，不可跳过

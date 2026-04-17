@@ -1,5 +1,5 @@
 ---
-name: database-design-standards
+name: tk-database-design-standards
 description: >
   数据库设计规范 — AI 全自动执行流水线。当用户要求设计数据库表结构、创建/修改数据库表、
   编写 DDL/建表语句、设计索引、优化表结构、设计数据模型、处理表间关系、
@@ -30,9 +30,9 @@ description: >
 进入已有项目时，必须先读取现有的表结构、命名规范、已有的 migration 文件，
 严格遵循项目已有的模式，不引入新的设计风格。
 
-特别注意：如果存在 `dev-task-precheck` skill，数据库设计任务应优先通过它作为入口，
+特别注意：如果存在 `tk-dev-task-precheck` skill，数据库设计任务应优先通过它作为入口，
 由它完成前置分析后再交接给本 skill，而非直接触发本 skill。
-如果本 skill 是被 `dev-task-precheck` 交接触发的，接收交接包中的预扫描结果
+如果本 skill 是被 `tk-dev-task-precheck` 交接触发的，接收交接包中的预扫描结果
 作为参考输入，但本 skill 的 D0 需求分析阶段仍然是强制的，不可跳过。
 
 ### 流程降级机制
@@ -457,10 +457,10 @@ CREATE TABLE `{prefix}_{module}` (
 
 ## 协作与辅助 Skill
 
-### 上游 Skill：dev-task-precheck
+### 上游 Skill：tk-dev-task-precheck
 
-本 skill 支持被 `dev-task-precheck`（开发任务前置守门员）作为下游 skill 调用。
-当通过 `dev-task-precheck` 交接触发时：
+本 skill 支持被 `tk-dev-task-precheck`（开发任务前置守门员）作为下游 skill 调用。
+当通过 `tk-dev-task-precheck` 交接触发时：
 - 交接包中的项目技术栈快照、数据库类型信息可作为 D0 阶段的参考输入
 - 但 D0 的现有数据库扫描和需求确认仍然是强制的，不可跳过
 - D0 的用户确认点仍然需要执行，不可跳过
@@ -469,8 +469,8 @@ CREATE TABLE `{prefix}_{module}` (
 ### 下游 Skill 协作
 
 数据库设计完成后，结果可交接给下游 skill：
-- `springboot-dev-standards` — 基于表结构生成 Entity/Mapper/Service
-- `vue3-dev-standards` — 基于表结构设计前端表单和列表页
+- `tk-springboot-dev-standards` — 基于表结构生成 Entity/Mapper/Service
+- `tk-vue3-dev-standards` — 基于表结构设计前端表单和列表页
 
 协作时，本 skill 的 D4 交付物（DDL 脚本 + 设计文档）应作为下游 skill 的输入。
 
