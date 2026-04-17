@@ -389,10 +389,32 @@ CREATE TABLE `{prefix}_{module}` (
 
 ## D4: 交付输出
 
-### D4.1 交付物清单
+### D4.1 SQL 文件输出路径规范（强制）
+
+所有数据库 SQL 文件必须按以下规则存放：
 
 ```
-1. DDL 脚本
+根目录/
+└── sql/
+    ├── ddl/          -- 数据定义语言（建表、修改表结构、索引）
+    │   ├── V{version}__{描述}.sql          -- Flyway/Liquibase 迁移脚本
+    │   └── {table_name}__create.sql         -- 单表建表脚本（可选）
+    │
+    └── dml/          -- 数据操作语言（增删改数据）
+        ├── {table_name}__insert_initial.sql -- 初始数据
+        ├── {table_name}__update_{字段}.sql  -- 数据更新脚本
+        └── V{version}__{描述}.sql           -- 数据迁移脚本
+```
+
+**命名规范：**
+- 迁移脚本：`V{版本号}__{简短描述}.sql`（双下划线分隔）
+- 单表脚本：`{表名}__{操作类型}.sql`
+- 版本号格式：`001`、`002` 或 `YYYYMMDDNNN`
+
+### D4.2 交付物清单
+
+```
+1. DDL 脚本（存放于 sql/ddl/）
    ├── 建表语句（带完整 COMMENT 和索引）
    ├── 初始数据 INSERT（如需要）
    └── 迁移脚本命名（Flyway: V{version}__{description}.sql）

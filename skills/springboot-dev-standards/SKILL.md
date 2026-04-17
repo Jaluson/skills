@@ -612,13 +612,233 @@ gradle build
 
 ### P6.2 交付输出
 
+开发任务结束后，必须生成以下交付物：
+
+#### 1. 需求分析文件（`REQUIREMENT_ANALYSIS.md`）
+
+在项目根目录或输出目录下生成需求分析文档：
+
+```markdown
+# 需求分析文档
+
+## 任务信息
+- **任务类型**：功能开发 / Bug修复 / 重构 / ...
+- **开始时间**：[时间]
+- **结束时间**：[时间]
+
+## 原始需求
+[用户提出的原始需求描述]
+
+## 需求拆解
+| 需求编号 | 需求描述 | 实现状态 | 实现位置 |
+|---------|---------|---------|----------|
+| R1 | ... | ✅ 已实现 | Controller:xxx / Service:xxx |
+| R2 | ... | ⚠️ 部分实现 | ... |
+| R3 | ... | ❌ 未实现 | ... |
+
+## 风险评估
+- [ ] 风险点1及应对措施
+- [ ] 风险点2及应对措施
+
+## 依赖项
+- 外部依赖：[依赖服务/库]
+- 前置条件：[必须满足的条件]
+```
+
+#### 2. 改动记录（`CHANGE_RECORD.md`）
+
+```markdown
+# 代码改动记录
+
+## 变更概述
+[简要描述本次变更]
+
+## 新增文件
+| 文件路径 | 说明 |
+|---------|------|
+| src/... | ... |
+
+## 修改文件
+| 文件路径 | 修改内容 |
+|---------|---------|
+| src/... | ... |
+
+## 删除文件
+| 文件路径 | 删除原因 |
+|---------|---------|
+| src/... | ... |
+
+## 数据库变更
+[DDL 或 Flyway/Liquibase 变更]
+
+## API 变更
+| 方法 | 路径 | 说明 |
+|-----|------|-----|
+| POST | /api/xxx | 新增 xxx |
+```
+
+#### 3. 编译检查报告（`BUILD_REPORT.md`）
+
+在 P4 编译验证后生成：
+
+```markdown
+# 编译检查报告
+
+## 编译环境
+- Java 版本：
+- Maven/Gradle 版本：
+- 构建时间：
+
+## 编译结果
+- **状态**：✅ 通过 / ❌ 失败
+- **警告数**：[数量]
+- **错误数**：[数量]
+
+## 编译详情
+[粘贴编译输出关键信息]
+
+## 测试结果
+- **单元测试**：✅ 通过 / ❌ 失败 ([通过数]/[总数])
+- **集成测试**：✅ 通过 / ❌ 失败 ([通过数]/[总数])
+
+## 产物信息
+- JAR/WAR 文件：[路径]
+- 包大小：[大小]
+```
+
+#### 4. 接口文档（`API_DOCUMENTATION.md`）
+
+使用 SpringDoc OpenAPI 或 Swagger 自动生成：
+
+```markdown
+# API 接口文档
+
+## 基础信息
+- **服务地址**：[host:port]
+- **Base Path**：[/api]
+- **文档地址**：[/swagger-ui.html 或 /v3/api-docs]
+
+## 接口清单
+
+### 用户管理模块
+
+#### 创建用户
+- **URL**：`POST /api/users`
+- **描述**：新建用户
+- **请求参数**：
+  ```json
+  {
+    "username": "string (必填)",
+    "email": "string (必填, 邮箱格式)",
+    "password": "string (必填, 6-20位)"
+  }
+  ```
+- **响应示例**：
+  ```json
+  {
+    "code": 200,
+    "message": "success",
+    "data": {
+      "id": "1900123456789012345",
+      "username": "admin"
+    }
+  }
+  ```
+
+[继续列出所有接口...]
+```
+
+**自动生成方式**：
+- SpringDoc（推荐）：访问 `/v3/api-docs` 获取 JSON，转换为 Markdown
+- Swagger：`mvn swagger-to-markdown` 或使用 swagger2markup 插件
+
+#### 5. CURL 测试文档（`CURL_TEST_COMMANDS.md`）
+
+为每个接口生成可直接使用的 curl 命令：
+
+```markdown
+# CURL 快速测试命令
+
+## 前置条件
+```bash
+# 设置基础变量
+BASE_URL=http://localhost:8080/api
+TOKEN="Bearer eyJhbGc..."
+```
+
+## 用户管理接口
+
+### 创建用户
+```bash
+curl -X POST "${BASE_URL}/users" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: ${TOKEN}" \
+  -d '{
+    "username": "testuser",
+    "email": "test@example.com",
+    "password": "password123"
+  }'
+```
+
+### 查询用户列表
+```bash
+curl -X GET "${BASE_URL}/users?page=1&size=20" \
+  -H "Authorization: ${TOKEN}"
+```
+
+### 查询单个用户
+```bash
+curl -X GET "${BASE_URL}/users/1900123456789012345" \
+  -H "Authorization: ${TOKEN}"
+```
+
+### 更新用户
+```bash
+curl -X PUT "${BASE_URL}/users/1900123456789012345" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: ${TOKEN}" \
+  -d '{
+    "email": "newemail@example.com"
+  }'
+```
+
+### 删除用户
+```bash
+curl -X DELETE "${BASE_URL}/users/1900123456789012345" \
+  -H "Authorization: ${TOKEN}"
+```
+
+## 测试用例
+
+### 成功场景
+| 用例 | 命令 | 预期结果 |
+|-----|------|---------|
+| 正常创建 | curl ... | code=200, 返回用户信息 |
+| 正常查询 | curl ... | code=200, 返回分页数据 |
+
+### 异常场景
+| 用例 | 命令 | 预期结果 |
+|-----|------|---------|
+| 用户名重复 | curl ... | code=400, message="用户名已存在" |
+| 参数缺失 | curl ... | code=400, message="参数校验失败" |
+| 用户不存在 | curl ... | code=404, message="用户不存在" |
+```
+
+---
+
+### P6.2 交付输出清单
+
 1. **变更摘要**：做了什么，改了哪些文件
 2. **需求覆盖报告**：每个原始需求点的实现状态
-3. **API 变更**：新增/修改的接口文档
-4. **数据库变更**：新增/修改的表结构或 SQL
-5. **关键决策**：非直觉的设计选择及原因
-6. **已知局限**：妥协或临时方案
-7. **后续建议**：可改进但不在本次范围内的点
+3. **需求分析文件** `REQUIREMENT_ANALYSIS.md`：需求拆解、风险评估、依赖项
+4. **改动记录** `CHANGE_RECORD.md`：新增/修改/删除文件清单、数据库变更
+5. **编译检查报告** `BUILD_REPORT.md`：编译结果、测试结果、产物信息
+6. **接口文档** `API_DOCUMENTATION.md`：自动生成的 Swagger/OpenAPI 文档
+7. **CURL 测试文档** `CURL_TEST_COMMANDS.md`：每个接口的 curl 命令及测试用例
+8. **数据库变更**：新增/修改的表结构或 SQL（如有）
+9. **关键决策**：非直觉的设计选择及原因
+10. **已知局限**：妥协或临时方案
+11. **后续建议**：可改进但不在本次范围内的点
 
 ---
 

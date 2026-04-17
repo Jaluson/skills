@@ -639,14 +639,216 @@ npx vite build
 
 ### P6.4 交付输出
 
+开发任务结束后，必须生成以下交付物：
+
+#### 1. 需求分析文件（`REQUIREMENT_ANALYSIS.md`）
+
+在项目根目录或输出目录下生成需求分析文档：
+
+```markdown
+# 需求分析文档
+
+## 任务信息
+- **任务类型**：页面开发 / 组件开发 / 功能重构 / Bug修复 / ...
+- **开始时间**：[时间]
+- **结束时间**：[时间]
+
+## 原始需求
+[用户提出的原始需求描述]
+
+## 需求拆解
+| 需求编号 | 需求描述 | 实现状态 | 实现位置 |
+|---------|---------|---------|----------|
+| R1 | ... | ✅ 已实现 | views/xxx.vue / components/xxx.vue |
+| R2 | ... | ⚠️ 部分实现 | ... |
+| R3 | ... | ❌ 未实现 | ... |
+
+## 风险评估
+- [ ] 风险点1及应对措施
+- [ ] 风险点2及应对措施
+
+## 依赖项
+- 外部依赖：[依赖服务/库/接口]
+- 前置条件：[必须满足的条件]
+
+## 兼容性与影响
+- 浏览器兼容性：[支持的浏览器范围]
+- 影响范围：[影响的其他模块/页面]
+```
+
+#### 2. 改动记录（`CHANGE_RECORD.md`）
+
+```markdown
+# 代码改动记录
+
+## 变更概述
+[简要描述本次变更]
+
+## 新增文件
+| 文件路径 | 说明 |
+|---------|------|
+| src/views/... | 页面组件 |
+| src/components/... | 公共组件 |
+| src/composables/... | 组合式函数 |
+| src/api/... | API 接口定义 |
+| src/types/... | 类型定义 |
+
+## 修改文件
+| 文件路径 | 修改内容 |
+|---------|---------|
+| src/views/... | ... |
+
+## 删除文件
+| 文件路径 | 删除原因 |
+|---------|---------|
+| src/... | ... |
+
+## 路由变更
+[如有路由配置变更]
+
+## 样式变更
+[如有全局样式或 CSS 变量变更]
+```
+
+#### 3. 编译检查报告（`BUILD_REPORT.md`）
+
+在 P4 编译验证后生成：
+
+```markdown
+# 编译检查报告
+
+## 编译环境
+- Node.js 版本：
+- 包管理器：npm / yarn / pnpm
+- 构建工具：Vite / Webpack
+
+## 编译结果
+- **状态**：✅ 通过 / ❌ 失败
+- **TypeScript 错误**：0
+- **ESLint 错误**：0
+- **构建产物**：[dist/ 路径]
+
+## 编译详情
+[粘贴构建输出关键信息]
+
+## 类型检查
+```
+npx vue-tsc --noEmit
+[类型检查输出]
+```
+
+## ESLint 检查
+```
+npx eslint src/
+[ESLint 输出]
+```
+
+## 单元测试（如已配置）
+- **运行数**：[数量]
+- **通过数**：[数量]
+- **失败数**：[数量]
+- **覆盖率**：[覆盖率百分比]
+```
+
+#### 4. API 接口文档（`API_CONTRACT.md`）
+
+记录前端调用的所有接口定义：
+
+```markdown
+# API 接口契约文档
+
+## 基础信息
+- **API Base URL**：[来自 .env 配置]
+- **接口版本**：v1 / v2 / ...
+
+## 接口清单
+
+### 用户模块
+
+#### 获取用户列表
+```typescript
+// 请求
+GET /api/users?page=1&size=20
+
+// 响应
+interface UserListResponse {
+  code: number
+  message: string
+  data: {
+    list: User[]
+    total: number
+    page: number
+    size: number
+  }
+}
+
+interface User {
+  id: string
+  username: string
+  email: string
+  status: 'active' | 'disabled'
+  createdAt: string
+}
+```
+
+#### 创建用户
+```typescript
+// 请求
+POST /api/users
+Content-Type: application/json
+
+{
+  username: string
+  email: string
+  password: string
+}
+
+// 响应
+interface CreateUserResponse {
+  code: number
+  message: string
+  data: User
+}
+```
+
+[继续列出所有接口...]
+```
+
+## 前端测试命令（如使用 Vite）
+
+```bash
+# 开发环境
+npm run dev
+
+# 类型检查
+npm run type-check
+
+# ESLint 检查
+npm run lint
+
+# 构建生产版本
+npm run build
+
+# 预览生产版本
+npm run preview
+```
+
+---
+
+### P6.4 交付输出清单
+
 向用户交付时，提供：
 1. **变更摘要**：做了什么，改了哪些文件
 2. **需求覆盖报告**：每个原始需求点的实现状态
-3. **关键决策**：做了哪些非直觉的设计选择及其原因
-4. **已知局限**：如果有妥协或临时方案，明确说明
-5. **后续建议**：如果发现可以改进但不在本次需求范围内的点，列出
-6. **测试报告**：新增测试用例数 / 失败数，覆盖率摘要（如已配置），未覆盖的关键逻辑说明（如有）
-7. **Git 变更说明**：涉及的 commit 列表或变更文件清单（方便用户 review）
+3. **需求分析文件** `REQUIREMENT_ANALYSIS.md`：需求拆解、风险评估、依赖项、兼容性影响
+4. **改动记录** `CHANGE_RECORD.md`：新增/修改/删除文件清单、路由变更、样式变更
+5. **编译检查报告** `BUILD_REPORT.md`：编译结果、类型检查、ESLint 检查、测试结果
+6. **API 接口文档** `API_CONTRACT.md`：前端调用的所有接口定义（类型安全）
+7. **关键决策**：做了哪些非直觉的设计选择及其原因
+8. **已知局限**：如果有妥协或临时方案，明确说明
+9. **后续建议**：如果发现可以改进但不在本次需求范围内的点，列出
+10. **测试报告**：新增测试用例数 / 失败数，覆盖率摘要（如已配置），未覆盖的关键逻辑说明（如有）
+11. **Git 变更说明**：涉及的 commit 列表或变更文件清单（方便用户 review）
 
 ### 质量门禁 P6
 
