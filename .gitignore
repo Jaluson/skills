@@ -1,0 +1,25 @@
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+*~
+
+# Claude
+.claude/
+!.claude/settings*.json
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Temp
+*.tmp
+*.temp
+.cache/
