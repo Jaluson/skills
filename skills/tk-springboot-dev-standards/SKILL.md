@@ -108,6 +108,7 @@ description: >
 - Java 版本（`sourceCompatibility` 或 `java.version`）
 - 配置文件（`application.yml` / `application.properties`，含 profile 配置）
 - 项目模块结构（单模块 or 多模块）
+- **依赖版本管理方式**：确认是否使用统一版本管理（Maven `dependencyManagement` / Gradle `version catalog` 或 `buildSrc`）
 
 ### P0.2 技术栈识别
 
@@ -158,6 +159,7 @@ description: >
 ### 质量门禁 P0
 
 - [ ] 已读取构建配置确认技术栈和版本
+- [ ] 已确认依赖是否使用统一版本管理（dependencyManagement / version catalog）
 - [ ] 已读取 application.yml/properties 确认项目配置
 - [ ] 已完整阅读所有直接相关的源文件
 - [ ] 已确认被修改文件的所有调用方
@@ -381,6 +383,7 @@ VO: 出参字段
 - 异常通过全局异常处理器统一处理
 - 使用项目已有的统一返回值封装
 - 日志使用 SLF4J，不直接使用 Log4j/Logback
+- **依赖版本必须使用统一版本管理**：Maven 项目通过 `dependencyManagement` 声明版本，子模块引用时不带版本号；Gradle 项目使用 `version catalog`（`libs.versions.toml`）或 `buildSrc` 集中管理版本
 
 ### P3.3 文件级微自检
 
