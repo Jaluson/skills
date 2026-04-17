@@ -46,7 +46,7 @@
 | 常量 | UPPER_SNAKE_CASE | `MAX_RETRY_COUNT` |
 | 包名 | 全小写，点分隔 | `com.example.project.module.user` |
 | 数据库表名 | snake_case，模块前缀 | `sys_user`、`biz_order` |
-| 数据库字段 | snake_case | `created_at`、`user_name` |
+| 数据库字段 | snake_case | `create_time`、`user_name` |
 | URL 路径 | kebab-case，复数名词 | `/api/users`、`/api/order-items` |
 | 配置键 | kebab-case | `app.max-upload-size` |
 

@@ -186,8 +186,8 @@ module/{module}/
 ├── id BIGINT PRIMARY KEY COMMENT '雪花ID'
 ├── 业务字段...
 ├── 公共字段：
-│   ├── created_at DATETIME
-│   ├── updated_at DATETIME
+│   ├── create_time DATETIME
+│   ├── update_time DATETIME
 │   ├── created_by BIGINT
 │   ├── updated_by BIGINT
 │   └── deleted TINYINT DEFAULT 0

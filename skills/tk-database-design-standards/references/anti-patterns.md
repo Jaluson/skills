@@ -183,7 +183,7 @@ CREATE TABLE `biz_order` (
     `order_no`   VARCHAR(32)    NOT NULL DEFAULT '' COMMENT '订单编号',
     `order_status` TINYINT     NOT NULL DEFAULT 0 COMMENT '订单状态：0-待支付，1-已支付，2-已发货，3-已完成，4-已取消',
     `total_amount` DECIMAL(12,2) NOT NULL DEFAULT 0 COMMENT '订单总金额（元）',
-    `created_at`  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'
+    `create_time`  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'
 ) COMMENT='订单主表';
 ```
 
@@ -205,7 +205,7 @@ CREATE TABLE `biz_order` (
 CREATE TABLE `biz_order` (
     `id`    BIGINT NOT NULL,
     `amount` DECIMAL(12,2),
-    -- 缺少 created_by, updated_by, created_at, updated_at, deleted
+    -- 缺少 created_by, updated_by, create_time, update_time, deleted
     PRIMARY KEY (`id`)
 );
 ```
@@ -214,8 +214,8 @@ CREATE TABLE `biz_order` (
 ```sql
 `created_by`  BIGINT    NOT NULL DEFAULT 0 COMMENT '创建人ID',
 `updated_by`  BIGINT    NOT NULL DEFAULT 0 COMMENT '更新人ID',
-`created_at`  DATETIME  NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-`updated_at`  DATETIME  NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+`create_time`  DATETIME  NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+`update_time`  DATETIME  NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
 `deleted`     TINYINT   NOT NULL DEFAULT 0 COMMENT '逻辑删除：0-正常，1-已删除'
 ```
 
@@ -224,7 +224,7 @@ CREATE TABLE `biz_order` (
 |--------|----------|----------|
 | 核心业务表 | id + 审计4字段 + deleted | tenant_id, version |
 | 关联表 | id + 审计4字段 + deleted | — |
-| 日志表 | id + created_at + created_by | status, error_msg |
+| 日志表 | id + create_time + create_by | status, error_msg |
 | 配置表 | id + 审计4字段 + deleted | sort_order |
 
 **影响等级**：严重（审计追踪缺失，合规场景必败）
@@ -276,7 +276,7 @@ CREATE TABLE `biz_product` (
 `name`     VARCHAR(50) NULL,
 `amount`   DECIMAL(12,2) NULL,
 `status`   TINYINT NULL,
-`created_at` DATETIME NULL
+`create_time` DATETIME NULL
 ```
 
 **正确做法**：默认 NOT NULL，仅在有明确业务理由时允许 NULL。
@@ -427,7 +427,7 @@ public void createOrder(OrderDTO dto) {
 ```sql
 KEY `idx_user_id` (`user_id`),        -- 冗余：user_id 是外键，已有索引
 KEY `idx_user_status` (`user_id`, `status`),
-KEY `idx_user_status_created` (`user_id`, `status`, `created_at`)
+KEY `idx_user_status_created` (`user_id`, `status`, `create_time`)
 
 -- idx_user_id 完全被 idx_user_status 覆盖（联合索引包含 user_id）
 ```
@@ -435,7 +435,7 @@ KEY `idx_user_status_created` (`user_id`, `status`, `created_at`)
 **正确做法**：
 ```sql
 KEY `idx_order_user_id` (`user_id`),                    -- 外键索引
-KEY `idx_order_status_created` (`order_status`, `created_at`),  -- 覆盖独立查询
+KEY `idx_order_status_created` (`order_status`, `create_time`),  -- 覆盖独立查询
 KEY `idx_order_user_status` (`user_id`, `order_status`)          -- 覆盖联合查询
 ```
 
@@ -480,7 +480,7 @@ KEY `idx_config_value` (`config_value`)
 ```sql
 -- 区分度公式：COUNT(DISTINCT column) / COUNT(*) 越接近1越好
 -- 性别字段区分度 = 2 / 总行数 ≈ 0，低于 0.01 的字段不建议建单字段索引
--- 如果必须查询：使用联合索引，如 (gender, created_at)
+-- 如果必须查询：使用联合索引，如 (gender, create_time)
 
 -- 小表（行数 < 10000）：优先全表扫描，索引收益不明显
 -- 确实需要：联合索引优于单字段索引
@@ -540,33 +540,33 @@ CREATE TABLE `biz_order_item` (
 
 **错误示例**：
 ```sql
--- 查询：WHERE status = 1 AND created_at > '2026-01-01'
--- 错误：created_at 在前，status 在后，无法使用索引
-KEY `idx_wrong` (`created_at`, `status`)
+-- 查询：WHERE status = 1 AND create_time > '2026-01-01'
+-- 错误：create_time 在前，status 在后，无法使用索引
+KEY `idx_wrong` (`create_time`, `status`)
 
--- 查询：WHERE user_id = 1 ORDER BY created_at DESC
+-- 查询：WHERE user_id = 1 ORDER BY create_time DESC
 -- 错误：等值查询字段和排序字段顺序颠倒
-KEY `idx_wrong2` (`created_at`, `user_id`)
+KEY `idx_wrong2` (`create_time`, `user_id`)
 ```
 
 **正确做法**：
 ```sql
 -- 原则：等值查询字段在前，范围查询字段在后，排序字段在最后
--- 查询：WHERE status = 1 AND created_at > '2026-01-01'
--- 正确：status 等值在前，created_at 范围在后
-KEY `idx_correct` (`status`, `created_at`)
+-- 查询：WHERE status = 1 AND create_time > '2026-01-01'
+-- 正确：status 等值在前，create_time 范围在后
+KEY `idx_correct` (`status`, `create_time`)
 
--- 查询：WHERE user_id = 1 ORDER BY created_at DESC
+-- 查询：WHERE user_id = 1 ORDER BY create_time DESC
 -- 正确：等值字段在前
-KEY `idx_correct2` (`user_id`, `created_at`)
+KEY `idx_correct2` (`user_id`, `create_time`)
 ```
 
 **联合索引设计规范**：
 | 字段类型 | 放置顺序 | 示例 |
 |----------|----------|------|
 | 等值查询字段 | 最前 | `status = 1` |
-| 范围查询字段 | 中间 | `created_at > '...'` |
-| 排序字段 | 最后 | `ORDER BY created_at` |
+| 范围查询字段 | 中间 | `create_time > '...'` |
+| 排序字段 | 最后 | `ORDER BY create_time` |
 
 **影响等级**：严重（查询无法使用索引，全表扫描）
 
@@ -627,7 +627,7 @@ ORDER BY SUM_TIMER_WAIT DESC LIMIT 10;
 SELECT * FROM sys_user WHERE id = 1;
 
 -- 禁止：在分页查询中使用 SELECT *
-SELECT * FROM biz_order ORDER BY created_at DESC LIMIT 0, 20;
+SELECT * FROM biz_order ORDER BY create_time DESC LIMIT 0, 20;
 ```
 
 **正确做法**：明确指定需要的字段。
@@ -637,10 +637,10 @@ SELECT `id`, `username`, `real_name`, `email`, `phone`
 FROM `sys_user` WHERE `id` = 1;
 
 -- 正确：使用覆盖索引
-SELECT `id`, `order_status`, `total_amount`, `created_at`
+SELECT `id`, `order_status`, `total_amount`, `create_time`
 FROM `biz_order`
 WHERE `user_id` = 1 AND `order_status` = 0
-ORDER BY `created_at` DESC LIMIT 0, 20;
+ORDER BY `create_time` DESC LIMIT 0, 20;
 ```
 
 **禁止使用 SELECT * 的场景**：
@@ -747,7 +747,7 @@ SELECT * FROM `biz_order` WHERE `user_id` = '1001';
 -- 同样触发隐式类型转换
 
 -- 错误：日期字段比较
-SELECT * FROM `biz_order` WHERE `created_at` > 20260101;
+SELECT * FROM `biz_order` WHERE `create_time` > 20260101;
 ```
 
 **正确做法**：
@@ -755,7 +755,7 @@ SELECT * FROM `biz_order` WHERE `created_at` > 20260101;
 -- 正确：使用正确的类型
 SELECT * FROM `biz_order` WHERE `order_no` = 'SO20260101001';
 SELECT * FROM `biz_order` WHERE `user_id` = 1001;
-SELECT * FROM `biz_order` WHERE `created_at` > '2026-01-01 00:00:00';
+SELECT * FROM `biz_order` WHERE `create_time` > '2026-01-01 00:00:00';
 ```
 
 **常见隐式类型转换场景**：
@@ -763,7 +763,7 @@ SELECT * FROM `biz_order` WHERE `created_at` > '2026-01-01 00:00:00';
 |----------|----------|----------|
 | VARCHAR | `WHERE code = 123` | `WHERE code = '123'` |
 | BIGINT | `WHERE id = '1001'` | `WHERE id = 1001` |
-| DATETIME | `WHERE created_at > 20260101` | `WHERE created_at > '2026-01-01'` |
+| DATETIME | `WHERE create_time > 20260101` | `WHERE create_time > '2026-01-01'` |
 | INT | `WHERE status = '1'` | `WHERE status = 1` |
 
 **影响等级**：严重（索引失效，查询性能大幅下降）

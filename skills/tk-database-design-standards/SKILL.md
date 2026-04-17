@@ -192,8 +192,8 @@ description: >
    - 其他（请手动输入）
 
 3. 公共字段模式？
-   - 标准审计字段（created_by, updated_by, created_at, updated_at, deleted）
-   - 简化模式（仅 created_at, updated_at, deleted）
+   - 标准审计字段（create_by, update_by, create_time, update_time, deleted）
+   - 简化模式（仅 create_time, update_time, deleted）
    - 含租户字段（+ tenant_id）
    - 无公共字段
    - 自定义（请手动输入）
@@ -370,7 +370,7 @@ description: >
 - 使用 `utf8mb4` 字符集（MySQL）
 - 主键使用雪花ID（BIGINT，禁止 AUTO_INCREMENT）
 - 金额使用 `DECIMAL`，禁止 `FLOAT`/`DOUBLE`
-- 时间使用 `DATETIME` 或 `TIMESTAMP`（明确选择其一）
+- 时间使用 `DATETIME`，格式统一为 `yyyy-MM-dd HH:mm:ss`
 - 字段默认 `NOT NULL`，可空字段需有明确理由
 - 状态/枚举字段使用 `TINYINT`/`SMALLINT` + COMMENT 列举值含义
 - 字符串类型明确指定长度，禁止无限制的 `TEXT`（除非确实需要）
@@ -404,11 +404,11 @@ CREATE TABLE `{prefix}_{module}` (
     -- （按逻辑分组排列，每组之间空一行）
 
     -- ========== 公共字段 ==========
-    `created_by`    BIGINT          NOT NULL    DEFAULT 0           COMMENT '创建人ID',
-    `updated_by`    BIGINT          NOT NULL    DEFAULT 0           COMMENT '更新人ID',
-    `created_at`    DATETIME        NOT NULL    DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    `updated_at`    DATETIME        NOT NULL    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    `deleted`       TINYINT         NOT NULL    DEFAULT 0           COMMENT '逻辑删除：0-正常，1-已删除',
+    `create_by`     BIGINT          NOT NULL    DEFAULT 0           COMMENT '创建人ID',
+    `update_by`     BIGINT          NOT NULL    DEFAULT 0           COMMENT '更新人ID',
+    `create_time`   DATETIME        NOT NULL    DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间（yyyy-MM-dd HH:mm:ss）',
+    `update_time`   DATETIME        NOT NULL    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间（yyyy-MM-dd HH:mm:ss）',
+    `deleted`       TINYINT         NOT NULL    DEFAULT 0           COMMENT '逻辑删除标记：0-正常，1-已删除',
 
     -- ========== 主键 & 索引 ==========
     PRIMARY KEY (`id`),

@@ -60,9 +60,9 @@
 | 规则 | 说明 | 正确 | 错误 |
 |------|------|------|------|
 | snake_case | 全小写+下划线 | `user_name` | `userName`, `UserName` |
-| 见名知义 | 不需要注释也能理解 | `created_at` | `crt_dt` |
+| 见名知义 | 不需要注释也能理解 | `created_time` | `crt_dt` |
 | 布尔字段 | `is_` 前缀 | `is_active`, `is_deleted` | `active`, `deleted_flag` |
-| 时间字段 | `_at` / `_date` 后缀 | `created_at`, `birth_date` | `create_time`, `birthday` |
+| 时间字段 | `_time` / `_date` 后缀 | `created_time`, `update_time`, `birth_date` | `created_at`, `updated_at`, `birthday` |
 | 数量字段 | `_count` / `_num` 后缀 | `order_count`, `item_num` | `orders`, `num` |
 | 金额字段 | `_amount` / `_price` / `_fee` 后缀 | `total_amount`, `unit_price` | `money`, `cash` |
 | 比率字段 | `_rate` / `_ratio` 后缀 | `discount_rate`, `tax_rate` | `discount`, `tax` |
@@ -140,10 +140,10 @@ PRIMARY KEY (`id`)
 `updated_by`    BIGINT      NOT NULL    DEFAULT 0           COMMENT '更新人ID',
 
 -- 创建时间
-`created_at`    DATETIME    NOT NULL    DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+`create_time`    DATETIME    NOT NULL    DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
 
 -- 更新时间
-`updated_at`    DATETIME    NOT NULL    DEFAULT CURRENT_TIMESTAMP
+`update_time`    DATETIME    NOT NULL    DEFAULT CURRENT_TIMESTAMP
                             ON UPDATE CURRENT_TIMESTAMP     COMMENT '更新时间',
 
 -- 逻辑删除
@@ -174,7 +174,7 @@ PRIMARY KEY (`id`)
 |------|----------|----------|
 | 核心业务表 | id + 审计4字段 + deleted | tenant_id, version, ext_data |
 | 关联表 | id + 审计4字段 + deleted | — |
-| 日志表 | id + created_at + created_by | — （日志表不需要 updated_* 和 deleted） |
+| 日志表 | id + create_time + create_by | — （日志表不需要 update_time 和 deleted） |
 | 配置表 | id + 审计4字段 + deleted | sort_order |
 | 字典表 | id + 审计4字段 + deleted | sort_order |
 
@@ -215,7 +215,7 @@ PRIMARY KEY (`id`)
 `is_active` TINYINT    NOT NULL DEFAULT 1     COMMENT '是否启用：0-否，1-是',
 
 -- 时间：CURRENT_TIMESTAMP
-`created_at` DATETIME  NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+`create_time` DATETIME  NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
 
 -- 禁止 NULL 作为默认值
 -- 错误：DEFAULT NULL
@@ -348,8 +348,8 @@ CREATE TABLE sys_user (
     `remark`          VARCHAR(500)  NOT NULL DEFAULT '' COMMENT '备注',
     `created_by`      BIGINT        NOT NULL DEFAULT 0 COMMENT '创建人ID',
     `updated_by`      BIGINT        NOT NULL DEFAULT 0 COMMENT '更新人ID',
-    `created_at`      DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    `updated_at`      DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `create_time`      DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time`      DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     `deleted`         TINYINT       NOT NULL DEFAULT 0 COMMENT '逻辑删除：0-正常，1-已删除',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_user_username` (`username`),
@@ -379,13 +379,13 @@ CREATE TABLE biz_order (
     `receiver_address` VARCHAR(500)  NOT NULL DEFAULT '' COMMENT '收货地址',
     `created_by`      BIGINT         NOT NULL DEFAULT 0 COMMENT '创建人ID',
     `updated_by`      BIGINT         NOT NULL DEFAULT 0 COMMENT '更新人ID',
-    `created_at`      DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    `updated_at`      DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `create_time`      DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time`      DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     `deleted`         TINYINT        NOT NULL DEFAULT 0 COMMENT '逻辑删除：0-正常，1-已删除',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_order_order_no` (`order_no`),
     KEY `idx_order_user_id` (`user_id`),
-    KEY `idx_order_status_created` (`order_status`, `created_at`)
+    KEY `idx_order_status_created` (`order_status`, `create_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='订单主表';
 ```
 
@@ -410,11 +410,11 @@ CREATE TABLE log_operation (
     `duration`        INT            NOT NULL DEFAULT 0 COMMENT '耗时（毫秒）',
     `status`          TINYINT        NOT NULL DEFAULT 1 COMMENT '操作状态：0-失败，1-成功',
     `error_msg`       VARCHAR(1000)  NULL     COMMENT '错误信息',
-    `created_at`      DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `create_time`      DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     PRIMARY KEY (`id`),
     KEY `idx_oplog_user_id` (`user_id`),
     KEY `idx_oplog_module` (`module`),
-    KEY `idx_oplog_created_at` (`created_at`)
+    KEY `idx_oplog_create_time` (`create_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='操作日志';
 ```
 

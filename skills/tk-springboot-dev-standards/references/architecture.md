@@ -159,11 +159,11 @@ public abstract class BaseEntity {
     @TableId(type = IdType.ASSIGN_ID)  // 雪花ID，禁止使用 IdType.AUTO 自增
     private Long id;
 
-    @TableField(value = "created_at", fill = FieldFill.INSERT)
-    private LocalDateTime createdAt;
+    @TableField(value = "create_time", fill = FieldFill.INSERT)
+    private LocalDateTime createTime;
 
-    @TableField(value = "updated_at", fill = FieldFill.INSERT_UPDATE)
-    private LocalDateTime updatedAt;
+    @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
+    private LocalDateTime updateTime;
 
     @TableField(value = "created_by", fill = FieldFill.INSERT)
     private Long createdBy;
@@ -459,7 +459,7 @@ public interface UserMapper extends BaseMapper<User> {
         <if test="query.status != null">
             AND u.status = #{query.status}
         </if>
-        ORDER BY u.created_at DESC
+        ORDER BY u.create_time DESC
     </select>
 
 </mapper>
@@ -826,12 +826,12 @@ public class AppConfig {
 ### 表命名
 
 - 表名：`snake_case`，模块前缀，如 `sys_user`、`biz_order`
-- 字段名：`snake_case`，如 `created_at`、`user_name`
+- 字段名：`snake_case`，如 `create_time`、`user_name`
 - 主键：`id`，BIGINT，**必须使用雪花ID（Snowflake ID），禁止使用自增ID**
   - MyBatis-Plus：`@TableId(type = IdType.ASSIGN_ID)`
   - JPA：`@GeneratedValue(generator = "snowflake")` 配合自定义 ID 生成器
   - 禁止使用 `IdType.AUTO`、`@GeneratedValue(strategy = GenerationType.IDENTITY)` 等自增策略
-- 公共字段：`created_at`、`updated_at`、`created_by`、`updated_by`、`deleted`
+- 公共字段：`create_time`、`update_time`、`created_by`、`updated_by`、`deleted`
 
 ### 字段类型选择
 

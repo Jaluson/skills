@@ -203,10 +203,10 @@ MySQL> SELECT 123456789.012345 - 123456789.012344;
 
 ```sql
 -- 创建时间：使用 DATETIME
-`created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+`create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
 
 -- 更新时间：使用 DATETIME + 自动更新
-`updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+`update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
                   ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
 
 -- 精确到日期（不需要时间）
@@ -382,7 +382,7 @@ CREATE TABLE example (
 `content` CLOB COMMENT '内容',
 
 -- Oracle 时间戳
-`created_at` TIMESTAMP(0) NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+`create_time` TIMESTAMP(0) NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
 ```
 
 ---
@@ -487,7 +487,7 @@ DECIMAL(5,2)  → 整数3位  → 最大 999.99
 
 方案B：分离存储（推荐大型文本、文件）
 - 字段：content_id（关联到大文本表）
-- 大文本表：id, content(TEXT/MEDIUMTEXT), size, md5, created_at
+- 大文本表：id, content(TEXT/MEDIUMTEXT), size, md5, create_time
 - 优点：主表查询快，灵活存储
 - 缺点：多一次关联查询
 ```
@@ -510,7 +510,7 @@ CREATE TABLE sys_text_storage (
     `content`     MEDIUMTEXT NOT NULL COMMENT '文本内容',
     `size`        INT NOT NULL DEFAULT 0 COMMENT '字节数',
     `md5`         VARCHAR(32) NOT NULL DEFAULT '' COMMENT 'MD5校验',
-    `created_at`  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `create_time`  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     PRIMARY KEY (`id`)
 ) COMMENT='大文本存储表';
 ```
@@ -643,8 +643,8 @@ KEY `idx_tenant_id` (`tenant_id`)
 -- 基础审计（所有表推荐）
 `created_by` BIGINT   NOT NULL DEFAULT 0 COMMENT '创建人ID',
 `updated_by` BIGINT   NOT NULL DEFAULT 0 COMMENT '更新人ID',
-`created_at` DATETIME  NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-`updated_at` DATETIME  NOT NULL DEFAULT CURRENT_TIMESTAMP
+`create_time` DATETIME  NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+`update_time` DATETIME  NOT NULL DEFAULT CURRENT_TIMESTAMP
                      ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
 
 -- 完整审计（敏感数据表）
@@ -652,8 +652,8 @@ KEY `idx_tenant_id` (`tenant_id`)
 `created_by_name` VARCHAR(50) NOT NULL DEFAULT '' COMMENT '创建人姓名',
 `updated_by`   BIGINT   NOT NULL DEFAULT 0 COMMENT '更新人ID',
 `updated_by_name` VARCHAR(50) NOT NULL DEFAULT '' COMMENT '更新人姓名',
-`created_at`   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-`updated_at`   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+`create_time`   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+`update_time`   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
                      ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
 `created_ip`   VARCHAR(50) NOT NULL DEFAULT '' COMMENT '创建IP',
 `updated_ip`   VARCHAR(50) NOT NULL DEFAULT '' COMMENT '更新IP',

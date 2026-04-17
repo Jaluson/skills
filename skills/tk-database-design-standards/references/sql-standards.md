@@ -62,8 +62,8 @@ CREATE TABLE biz_order (
     -- ========== 公共字段 ==========
     `created_by`      BIGINT         NOT NULL DEFAULT 0  COMMENT '创建人ID',
     `updated_by`      BIGINT         NOT NULL DEFAULT 0  COMMENT '更新人ID',
-    `created_at`      DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    `updated_at`      DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP
+    `create_time`      DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time`      DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP
                                      ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     `deleted`         TINYINT        NOT NULL DEFAULT 0  COMMENT '逻辑删除：0-正常，1-已删除',
 
@@ -222,7 +222,7 @@ CREATE TABLE biz_order (
 -- 单独创建索引
 ALTER TABLE biz_order ADD UNIQUE KEY `uk_order_no` (`order_no`);
 ALTER TABLE biz_order ADD KEY `idx_order_user_id` (`user_id`);
-ALTER TABLE biz_order ADD KEY `idx_order_status_created` (`order_status`, `created_at`);
+ALTER TABLE biz_order ADD KEY `idx_order_status_created` (`order_status`, `create_time`);
 ```
 
 #### 大表加索引使用在线工具
@@ -319,7 +319,7 @@ WHERE id = 1234567890123456789
 UPDATE biz_order SET order_status = 1;
 
 -- 禁止：WHERE 条件过于宽泛
-UPDATE biz_order SET order_status = 1 WHERE created_at > '2026-01-01';
+UPDATE biz_order SET order_status = 1 WHERE create_time > '2026-01-01';
 ```
 
 #### 更新前确认影响行数
@@ -329,13 +329,13 @@ UPDATE biz_order SET order_status = 1 WHERE created_at > '2026-01-01';
 ```sql
 -- 第一步：先用 SELECT 确认影响行数
 SELECT COUNT(*) FROM biz_order
-WHERE order_status = 0 AND created_at < '2026-03-01';
+WHERE order_status = 0 AND create_time < '2026-03-01';
 -- 确认结果为预期行数后，再执行 UPDATE
 
 -- 第二步：执行 UPDATE，检查 affected_rows
 UPDATE biz_order
 SET order_status = 5, cancel_reason = '超时未支付自动取消'
-WHERE order_status = 0 AND created_at < '2026-03-01'
+WHERE order_status = 0 AND create_time < '2026-03-01'
   AND deleted = 0;
 -- 期望影响行数：1523，实际影响行数：1523 ✓
 ```
@@ -351,7 +351,7 @@ WHERE order_status = 0 AND created_at < '2026-03-01'
 ```sql
 -- 正确：逻辑删除
 UPDATE biz_order
-SET deleted = 1, updated_at = NOW()
+SET deleted = 1, update_time = NOW()
 WHERE id = 1234567890123456789
   AND deleted = 0;
 
@@ -366,11 +366,11 @@ DELETE FROM biz_order WHERE id = 1234567890123456789;
 ```sql
 -- 正确：分批删除，每批 1000 条，循环执行直到影响行数为 0
 DELETE FROM log_operation
-WHERE created_at < '2025-01-01'
+WHERE create_time < '2025-01-01'
 LIMIT 1000;
 
 -- 禁止：一次性删除大量数据
-DELETE FROM log_operation WHERE created_at < '2025-01-01';
+DELETE FROM log_operation WHERE create_time < '2025-01-01';
 ```
 
 ---
@@ -383,7 +383,7 @@ DELETE FROM log_operation WHERE created_at < '2025-01-01';
 
 ```sql
 -- 正确：明确指定列名
-SELECT id, order_no, user_id, order_status, total_amount, pay_amount, created_at
+SELECT id, order_no, user_id, order_status, total_amount, pay_amount, create_time
 FROM biz_order
 WHERE id = 1234567890123456789
   AND deleted = 0;
@@ -396,7 +396,7 @@ SELECT * FROM biz_order WHERE id = 1234567890123456789;
 
 | 规则 | 说明 | 正确 | 错误 |
 |------|------|------|------|
-| 左侧不要函数 | 函数会导致索引失效 | `WHERE created_at >= '2026-04-01'` | `WHERE DATE(created_at) = '2026-04-01'` |
+| 左侧不要函数 | 函数会导致索引失效 | `WHERE create_time >= '2026-04-01'` | `WHERE DATE(create_time) = '2026-04-01'` |
 | 左侧不要运算 | 运算会导致索引失效 | `WHERE amount > 100` | `WHERE amount + 0 > 100` |
 | 隐式类型转换 | 会导致索引失效 | `WHERE id = 1234567890` | `WHERE id = '123456789'` |
 | 前导模糊查询 | LIKE 前导 % 会导致全表扫描 | `WHERE name LIKE '张%'` | `WHERE name LIKE '%张%'` |
@@ -407,14 +407,14 @@ SELECT * FROM biz_order WHERE id = 1234567890123456789;
 -- 正确：条件中不使用函数，走索引
 SELECT id, order_no, total_amount
 FROM biz_order
-WHERE created_at >= '2026-04-01 00:00:00'
-  AND created_at < '2026-05-01 00:00:00'
+WHERE create_time >= '2026-04-01 00:00:00'
+  AND create_time < '2026-05-01 00:00:00'
   AND deleted = 0;
 
 -- 禁止：对索引列使用函数，导致索引失效
 SELECT id, order_no, total_amount
 FROM biz_order
-WHERE DATE(created_at) = '2026-04-01'
+WHERE DATE(create_time) = '2026-04-01'
   AND deleted = 0;
 ```
 
@@ -450,7 +450,7 @@ FROM biz_order o
 INNER JOIN sys_user u ON o.user_id = u.id AND u.deleted = 0
 WHERE o.order_status = 1
   AND o.deleted = 0
-  AND o.created_at >= '2026-04-01';
+  AND o.create_time >= '2026-04-01';
 
 -- 禁止：关联字段类型不一致（假设 user_id 是 VARCHAR）
 SELECT o.id, o.order_no, u.username

@@ -113,7 +113,7 @@ CREATE TABLE biz_order (
     `id`         BIGINT        NOT NULL COMMENT '主键（雪花ID）',
     `order_no`   VARCHAR(32)   NOT NULL DEFAULT '' COMMENT '订单编号',
     `user_id`    BIGINT        NOT NULL DEFAULT 0 COMMENT '用户ID',
-    `created_at` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `create_time` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_order_no` (`order_no`),        -- 二级索引：order_no
     KEY `idx_user_id` (`user_id`)                  -- 二级索引：user_id
@@ -225,12 +225,12 @@ CREATE TABLE biz_order (
     `user_id`     BIGINT       NOT NULL DEFAULT 0 COMMENT '用户ID',
     `order_status` TINYINT     NOT NULL DEFAULT 0 COMMENT '订单状态',
     `total_amount` DECIMAL(12,2) NOT NULL DEFAULT 0 COMMENT '订单金额',
-    `created_at`   DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `create_time`   DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     PRIMARY KEY (`id`),
     -- 外键字段索引：加速用户维度的订单查询
     KEY `idx_order_user_id` (`user_id`),
     -- 状态+时间联合索引：加速状态筛选和时间范围查询
-    KEY `idx_order_status_created` (`order_status`, `created_at`)
+    KEY `idx_order_status_created` (`order_status`, `create_time`)
 ) COMMENT='订单主表';
 ```
 
@@ -314,9 +314,9 @@ CREATE TABLE biz_order (
     `id`           BIGINT       NOT NULL COMMENT '主键',
     `order_status` TINYINT      NOT NULL DEFAULT 0 COMMENT '订单状态：0-待支付，1-已支付，2-已发货，3-已完成',
     `user_id`      BIGINT       NOT NULL DEFAULT 0 COMMENT '用户ID',
-    `created_at`   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `create_time`   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     PRIMARY KEY (`id`),
-    KEY `idx_order_user_status_created` (`user_id`, `order_status`, `created_at`)
+    KEY `idx_order_user_status_created` (`user_id`, `order_status`, `create_time`)
 ) COMMENT='订单主表';
 
 -- 以下查询可以使用索引：
@@ -326,14 +326,14 @@ SELECT * FROM biz_order WHERE user_id = 100;
 SELECT * FROM biz_order WHERE user_id = 100 AND order_status = 1;
 -- 等价于：使用了索引前缀 (user_id, order_status)
 
-SELECT * FROM biz_order WHERE user_id = 100 AND order_status = 1 AND created_at > '2026-01-01';
+SELECT * FROM biz_order WHERE user_id = 100 AND order_status = 1 AND create_time > '2026-01-01';
 -- 等价于：使用了全部索引
 
 -- 以下查询无法使用索引：
 SELECT * FROM biz_order WHERE order_status = 1;
 -- 无法使用索引（跳过前导列 user_id）
 
-SELECT * FROM biz_order WHERE created_at > '2026-01-01';
+SELECT * FROM biz_order WHERE create_time > '2026-01-01';
 -- 无法使用索引（跳过前导列 user_id, order_status）
 
 SELECT * FROM biz_order WHERE user_id > 100;
@@ -365,14 +365,14 @@ SELECT * FROM biz_order WHERE user_id > 100;
 
 ```sql
 -- 查询场景：
--- WHERE user_id = ? AND order_status = ? AND created_at > ?
+-- WHERE user_id = ? AND order_status = ? AND create_time > ?
 
--- 正确顺序：user_id（等值）→ order_status（等值）→ created_at（范围）
-KEY `idx_order_user_status_created` (`user_id`, `order_status`, `created_at`)
+-- 正确顺序：user_id（等值）→ order_status（等值）→ create_time（范围）
+KEY `idx_order_user_status_created` (`user_id`, `order_status`, `create_time`)
 
 -- 错误顺序（范围在前）
-KEY `idx_order_bad` (`created_at`, `user_id`, `order_status`)
--- 后果：created_at 的范围查询导致后续列无法使用索引
+KEY `idx_order_bad` (`create_time`, `user_id`, `order_status`)
+-- 后果：create_time 的范围查询导致后续列无法使用索引
 ```
 
 **原则二：区分度高的列在前**
@@ -395,14 +395,14 @@ KEY `idx_user_bad` (`user_id`, `phone`)  -- user_id 在前，但 phone 才是查
 **原则三：覆盖查询优先**
 
 ```sql
--- 查询场景：经常需要查询 user_id, order_status, created_at
+-- 查询场景：经常需要查询 user_id, order_status, create_time
 -- 如果这三个字段已经组成联合索引，查询可以直接从索引中获取数据，无需回表
 
 -- 覆盖索引设计
-KEY `idx_order_user_status_created` (`user_id`, `order_status`, `created_at`)
+KEY `idx_order_user_status_created` (`user_id`, `order_status`, `create_time`)
 
 -- 覆盖查询示例
-SELECT user_id, order_status, created_at
+SELECT user_id, order_status, create_time
 FROM biz_order
 WHERE user_id = 100 AND order_status = 1;
 -- 只需扫描索引，无需回表，性能最优
@@ -416,22 +416,22 @@ WHERE user_id = 100 AND order_status = 1;
 -- 业务需求：
 -- 1. 查询某用户的订单列表（WHERE user_id = ?）
 -- 2. 按状态筛选订单（WHERE order_status IN ?）
--- 3. 按创建时间排序（ORDER BY created_at DESC）
+-- 3. 按创建时间排序（ORDER BY create_time DESC）
 -- 4. 分页查询
 
 -- 索引设计：
 -- 核心查询条件：user_id（等值）
--- 排序字段：created_at
+-- 排序字段：create_time
 -- 筛选字段：order_status（多值）
 
 -- 推荐索引
-KEY `idx_order_user_created` (`user_id`, `created_at`)
+KEY `idx_order_user_created` (`user_id`, `create_time`)
 
 -- 为什么不包含 order_status？
 -- 因为 order_status 使用 IN 查询（多值），区分度低，且用户主要按时间查看订单
 
 -- 如果需要按状态筛选的优化
-KEY `idx_order_user_status_created` (`user_id`, `order_status`, `created_at`)
+KEY `idx_order_user_status_created` (`user_id`, `order_status`, `create_time`)
 -- 适用于状态筛选频率较高的场景
 ```
 
@@ -444,7 +444,7 @@ CREATE TABLE biz_product (
     `brand_id`     BIGINT       NOT NULL DEFAULT 0 COMMENT '品牌ID',
     `price`        DECIMAL(12,2) NOT NULL DEFAULT 0 COMMENT '价格',
     `sales_count`  INT          NOT NULL DEFAULT 0 COMMENT '销量',
-    `created_at`   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `create_time`   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     PRIMARY KEY (`id`),
     -- 分类+品牌+价格（用于价格范围筛选）
     KEY `idx_product_cat_brand_price` (`category_id`, `brand_id`, `price`),
@@ -485,7 +485,7 @@ CREATE TABLE biz_order (
     `user_id`     BIGINT       NOT NULL DEFAULT 0 COMMENT '用户ID',
     `order_status` TINYINT     NOT NULL DEFAULT 0 COMMENT '订单状态',
     `total_amount` DECIMAL(12,2) NOT NULL DEFAULT 0 COMMENT '订单金额',
-    `created_at`   DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `create_time`   DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     PRIMARY KEY (`id`),
     -- 覆盖索引：覆盖了查询所需的所有字段
     KEY `idx_order_user_status_amount` (`user_id`, `order_status`, `total_amount`)
@@ -574,7 +574,7 @@ EXPLAIN SELECT * FROM biz_order WHERE user_id = 100 AND order_status = 1;
 PRIMARY KEY (`id`)                                              -- 主键：pk_order
 UNIQUE KEY `uk_order_no` (`order_no`)                          -- 唯一：uk_order_no
 KEY `idx_order_user_id` (`user_id`)                            -- 普通：idx_order_user_id
-KEY `idx_order_status_created` (`order_status`, `created_at`)  -- 联合：idx_order_order_status_created
+KEY `idx_order_status_created` (`order_status`, `create_time`)  -- 联合：idx_order_order_status_created
 
 -- 用户表索引
 PRIMARY KEY (`id`)                                              -- 主键：pk_user
@@ -637,10 +637,10 @@ KEY `idx_product_category_id` (`category_id`)
 
 ```sql
 -- 订单表：按创建时间倒序查询
-KEY `idx_order_user_created` (`user_id`, `created_at`)
+KEY `idx_order_user_created` (`user_id`, `create_time`)
 
 -- 报表表：按部门分组统计
-KEY `idx_report_dept_created` (`dept_id`, `created_at`)
+KEY `idx_report_dept_created` (`dept_id`, `create_time`)
 ```
 
 ### 唯一性约束字段
@@ -764,8 +764,8 @@ KEY `idx_order_user_id` (`user_id`)    -- 正常
 KEY `idx_order_user_id_2` (`user_id`)  -- 冗余：完全相同的索引
 
 -- 冗余模式4：排序方向不同的索引
-KEY `idx_order_created_asc` (`created_at`)    -- ASC
-KEY `idx_order_created_desc` (`created_at`)  -- DESC
+KEY `idx_order_created_asc` (`create_time`)    -- ASC
+KEY `idx_order_created_desc` (`create_time`)  -- DESC
 -- 注意：MySQL 8.0+ 支持 ASC/DESC 索引，但大多数场景下冗余
 
 -- 非冗余示例：
@@ -908,7 +908,7 @@ KEY `idx_{表名}_{等值列}_{范围列}` (...)
 -- 如果数据库支持，添加 INDEX COMMENT
 
 -- 5. 可选：添加索引顺序（MySQL 8.0+）
-KEY `idx_order_created` (`created_at` DESC)  -- 降序排列
+KEY `idx_order_created` (`create_time` DESC)  -- 降序排列
 ```
 
 ---
