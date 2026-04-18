@@ -55,6 +55,153 @@ config.global.stubs = {
 };
 ```
 
+### 1.2 Vitest 进阶配置
+
+```typescript
+// vite.config.ts
+export default defineConfig({
+  test: {
+    // 全局测试超时时间
+    testTimeout: 10000,
+    hookTimeout: 10000,
+
+    // 序列化和快照配置
+    snapshotFormat: {
+      printBasicPrototype: false,
+    },
+
+    //coverage 配置详解
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html', 'lcov'],
+      reportsDirectory: 'coverage',
+
+      // 覆盖率阈值（门禁要求）
+      thresholds: {
+        statements: 70,
+        branches: 60,
+        functions: 80,
+        lines: 70,
+
+        // 允许新文件降低覆盖率
+        allowEmptyCoverage: true,
+      },
+
+      // 排除文件
+      exclude: [
+        'node_modules/',
+        'src/test/',
+        '**/*.d.ts',
+        '**/*.config.*',
+        '**/dist/',
+      ],
+
+      // 包含文件
+      include: [
+        'src/**/*.{ts,tsx,vue}',
+      ],
+
+      // 跳过检查（开发时可设为 true）
+      skipFull: false,
+    },
+
+    // CSS 模拟
+    css: {
+      modules: {
+        classNameStrategy: 'anonymous',
+      },
+    },
+
+    // 模拟文件配置
+    mock: {
+      '@vueuse/core': '/__mocks__/@vueuse/core.js',
+    },
+  },
+});
+```
+
+### 1.3 Mock 工厂函数
+
+```typescript
+// test/mocks/axios.ts
+import { vi } from 'vitest';
+import axios from 'axios';
+
+// 创建 Axios mock 工厂
+export const createAxiosMock = () => {
+  const mockGet = vi.fn();
+  const mockPost = vi.fn();
+  const mockPut = vi.fn();
+  const mockDelete = vi.fn();
+
+  vi.spyOn(axios, 'create').mockReturnValue({
+    get: mockGet,
+    post: mockPost,
+    put: mockPut,
+    delete: mockDelete,
+  } as any);
+
+  return { mockGet, mockPost, mockPut, mockDelete };
+};
+
+// 使用示例
+describe('API Tests', () => {
+  let mocks: ReturnType<typeof createAxiosMock>;
+
+  beforeEach(() => {
+    mocks = createAxiosMock();
+  });
+
+  it('should fetch user data', async () => {
+    const mockUser = { id: 1, name: 'Test User' };
+    mocks.mockGet.mockResolvedValue({ data: mockUser });
+
+    const result = await userApi.getById(1);
+    expect(result).toEqual(mockUser);
+  });
+});
+```
+
+### 1.4 模块 Mock（vi.mock）
+
+```typescript
+// 测试文件
+import { vi, describe, it, expect, beforeEach } from 'vitest';
+
+// 模拟整个模块
+vi.mock('@/utils/request', () => ({
+  default: {
+    get: vi.fn().mockResolvedValue({ data: [] }),
+    post: vi.fn().mockResolvedValue({ data: {} }),
+  },
+}));
+
+// 模拟动态导入
+vi.mock('echarts', async () => {
+  const actual = await vi.importActual('echarts');
+  return {
+    ...actual,
+    init: vi.fn(),
+  };
+});
+
+// 使用 vi.hoisted 进行依赖注入测试
+describe('Store Tests', () => {
+  const { useUserStore } = vi.hoisted(() => {
+    const mockApi = {
+      getUser: vi.fn().mockResolvedValue({ id: 1, name: 'Test' }),
+    };
+    return { useUserStore: () => mockApi };
+  });
+
+  it('should fetch user', async () => {
+    const store = useUserStore();
+    await store.fetchUser();
+    expect(store.user).toBeDefined();
+  });
+});
+```
+
 ---
 
 ## 二、单元测试规范
@@ -78,40 +225,98 @@ src/
         └── user.spec.ts
 ```
 
-### 2.2 Composables 单元测试
+### 2.2 MSW (Mock Service Worker) HTTP 拦截
+
+MSW 可以在网络层拦截 HTTP 请求，适合真实的 API 测试场景：
 
 ```typescript
-// composables/usePagination.ts
-export function usePagination<T>(
-  fetchFn: (params: any) => Promise<{ list: T[]; total: number }>
-) {
-  const loading = ref(false);
-  const list = ref<T[]>([]) as Ref<T[]>;
-  const pagination = reactive({
-    page: 1,
-    pageSize: 10,
-    total: 0,
+// test/msw/server.ts
+import { setupServer } from 'msw/node';
+import { http, HttpResponse } from 'msw';
+
+export const server = setupServer(
+  http.get('/api/users', () => {
+    return HttpResponse.json([
+      { id: 1, name: '张三' },
+      { id: 2, name: '李四' },
+    ]);
+  }),
+
+  http.get('/api/users/:id', ({ params }) => {
+    return HttpResponse.json({ id: params.id, name: '测试用户' });
+  }),
+
+  http.post('/api/users', async ({ request }) => {
+    const body = await request.json();
+    return HttpResponse.json({ id: 3, ...body }, { status: 201 });
+  }),
+);
+
+// 测试中使用
+import { server } from '@/test/msw/server';
+
+describe('API Integration Tests', () => {
+  beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+  afterEach(() => server.resetHandlers());
+  afterAll(() => server.close());
+
+  it('should fetch users', async () => {
+    const users = await userApi.list();
+    expect(users).toHaveLength(2);
+  });
+});
+```
+
+### 2.3 异步测试进阶
+
+```typescript
+describe('Async Tests', () => {
+  // 等待特定条件
+  it('should wait for data to load', async () => {
+    const wrapper = mount(DataLoader);
+
+    // 等待直到条件满足
+    await wrapper.vm.waitForData();
+
+    expect(wrapper.find('.data-list').exists()).toBe(true);
   });
 
-  async function loadData() {
-    loading.value = true;
-    try {
-      const result = await fetchFn({ ...pagination });
-      list.value = result.list;
-      pagination.total = result.total;
-    } finally {
-      loading.value = false;
-    }
-  }
+  // 异步组件测试
+  it('should handle async component', async () => {
+    const AsyncComponent = defineAsyncComponent({
+      loader: () => Promise.resolve({ template: '<div>Async</div>' }),
+      loadingComponent: LoadingSpinner,
+      errorComponent: ErrorBoundary,
+      delay: 200,
+      timeout: 3000,
+    });
 
-  function reset() {
-    pagination.page = 1;
-    loadData();
-  }
+    const wrapper = mount({
+      components: { AsyncComponent },
+      template: '<AsyncComponent />',
+    });
 
-  return { loading, list, pagination, loadData, reset };
-}
+    // 显示加载状态
+    expect(wrapper.findComponent(LoadingSpinner).exists()).toBe(true);
+
+    // 等待异步组件加载完成
+    await flushPromises();
+    expect(wrapper.find('.async-content').exists()).toBe(true);
+  });
+
+  // 使用 flushPromises 确保所有 Promise 被处理
+  it('should flush all promises', async () => {
+    const wrapper = mount(UserCard);
+    wrapper.vm.fetchData(); // 异步操作
+
+    await flushPromises();
+
+    expect(wrapper.emitted('loaded')).toBeTruthy();
+  });
+});
 ```
+
+### 2.4 Composables 单元测试
 
 ```typescript
 // composables/usePagination.spec.ts
@@ -177,7 +382,160 @@ describe('usePagination', () => {
 
 ## 三、组件测试规范
 
-### 3.1 组件测试示例
+### 3.1 Slot 测试
+
+```typescript
+// components/BaseCard.vue
+// <template>
+//   <div class="card">
+//     <header class="card-header">
+//       <slot name="header">默认标题</slot>
+//     </header>
+//     <main class="card-body">
+//       <slot />
+//     </main>
+//     <footer class="card-footer">
+//       <slot name="footer" :user="user" />
+//     </footer>
+//   </div>
+// </template>
+
+describe('Slot Tests', () => {
+  it('should render default slot content', () => {
+    const wrapper = mount(BaseCard, {
+      slots: {
+        default: '<p>默认内容</p>',
+      },
+    });
+
+    expect(wrapper.find('.card-body p').text()).toBe('默认内容');
+  });
+
+  it('should render named slot content', () => {
+    const wrapper = mount(BaseCard, {
+      slots: {
+        header: '<h1>自定义标题</h1>',
+        footer: '<button>操作</button>',
+      },
+    });
+
+    expect(wrapper.find('.card-header h1').text()).toBe('自定义标题');
+    expect(wrapper.find('.card-footer button').text()).toBe('操作');
+  });
+
+  it('should pass props to scoped slot', () => {
+    const wrapper = mount(BaseCard, {
+      slots: {
+        footer: ({ user }) => `<span>${user.name}</span>`,
+      },
+    });
+
+    expect(wrapper.find('.card-footer span').text()).toBe('张三');
+  });
+});
+```
+
+### 3.2 Teleport 组件测试
+
+```typescript
+// components/Modal.vue
+// <template>
+//   <Teleport to="body">
+//     <div v-if="visible" class="modal">
+//       <slot />
+//     </div>
+//   </Teleport>
+// </template>
+
+describe('Teleport Tests', () => {
+  it('should teleport content to body', async () => {
+    const wrapper = mount(Modal, {
+      props: { visible: true },
+      slots: { default: '<p>Modal Content</p>' },
+    });
+
+    // Teleport 内容应该在 body 中
+    expect(document.body.querySelector('.modal')).toBeTruthy();
+    expect(document.body.querySelector('.modal p').textContent).toBe('Modal Content');
+  });
+
+  it('should remove teleport content when hidden', async () => {
+    const wrapper = mount(Modal, {
+      props: { visible: true },
+      slots: { default: '<p>Modal Content</p>' },
+    });
+
+    expect(document.body.querySelector('.modal')).toBeTruthy();
+
+    await wrapper.setProps({ visible: false });
+
+    expect(document.body.querySelector('.modal')).toBeFalsy();
+  });
+});
+```
+
+### 3.3 provide/inject 测试
+
+```typescript
+// components/FormProvider.vue
+// <template>
+//   <form @submit.prevent="handleSubmit">
+//     <slot />
+//   </form>
+// </template>
+//
+// <script setup>
+// const props = defineProps<{ modelValue: FormData }>()
+// const emit = defineEmits<{ 'update:modelValue': [FormData] }>()
+// provide('formContext', { modelValue: props.modelValue, update: (val) => emit('update:modelValue', val) })
+// </script>
+
+describe('Provide/Inject Tests', () => {
+  const FormProvider = {
+    setup() {
+      const formData = ref({ name: '', email: '' });
+      provide('formContext', {
+        modelValue: formData,
+        update: (val) => { formData.value = val; },
+      });
+    },
+    template: '<form @submit.prevent><slot /></form>',
+  };
+
+  const FormField = {
+    inject: ['formContext'],
+    props: ['field'],
+    template: `
+      <input
+        :value="formContext.modelValue[field]"
+        @input="formContext.update({ ...formContext.modelValue, [field]: $event.target.value })"
+      />
+    `,
+  };
+
+  it('should share state via provide/inject', async () => {
+    const wrapper = mount(FormProvider, {
+      components: { FormField },
+      template: `
+        <FormProvider>
+          <FormField field="name" />
+          <FormField field="email" />
+        </FormProvider>
+      `,
+    });
+
+    const inputs = wrapper.findAll('input');
+
+    await inputs[0].setValue('张三');
+    expect(wrapper.vm.formContext.modelValue.name).toBe('张三');
+
+    await inputs[1].setValue('zhangsan@example.com');
+    expect(wrapper.vm.formContext.modelValue.email).toBe('zhangsan@example.com');
+  });
+});
+```
+
+### 3.4 组件测试示例
 
 ```vue
 <!-- components/UserCard.vue -->
@@ -504,6 +862,249 @@ test.describe('用户管理', () => {
 });
 ```
 
+### 5.3 Playwright API Testing
+
+```typescript
+// e2e/api.spec.ts
+import { test, expect, request } from '@playwright/test';
+
+test.describe('API Testing', () => {
+  test('should perform REST API testing', async () => {
+    const ctx = await request.newContext();
+
+    // GET 请求
+    const getResponse = await ctx.get('/api/users');
+    expect(getResponse.ok()).toBeTruthy();
+    expect(getResponse.status()).toBe(200);
+    const users = await getResponse.json();
+    expect(users).toHaveLength(10);
+
+    // POST 请求
+    const postResponse = await ctx.post('/api/users', {
+      data: {
+        name: 'New User',
+        email: 'new@example.com',
+      },
+    });
+    expect(postResponse.status()).toBe(201);
+    const newUser = await postResponse.json();
+    expect(newUser.name).toBe('New User');
+
+    // PUT 请求
+    const putResponse = await ctx.put('/api/users/1', {
+      data: { name: 'Updated User' },
+    });
+    expect(putResponse.status()).toBe(200);
+
+    // DELETE 请求
+    const deleteResponse = await ctx.delete('/api/users/1');
+    expect(deleteResponse.status()).toBe(204);
+
+    await ctx.dispose();
+  });
+});
+```
+
+### 5.4 Playwright 请求拦截
+
+```typescript
+// e2e/intercept.spec.ts
+import { test, expect } from '@playwright/test';
+
+test.describe('Request Interception', () => {
+  test('should mock API response', async ({ page }) => {
+    // 拦截并修改响应
+    await page.route('**/api/users', (route) => {
+      route.fulfill({
+        status: 200,
+        body: JSON.stringify([
+          { id: 1, name: 'Mocked User 1' },
+          { id: 2, name: 'Mocked User 2' },
+        ]),
+        headers: { 'Content-Type': 'application/json' },
+      });
+    });
+
+    await page.goto('/users');
+
+    // 验证使用的是 mock 数据
+    await expect(page.locator('.user-name').first()).toHaveText('Mocked User 1');
+  });
+
+  test('should intercept and modify request', async ({ page }) => {
+    await page.route('**/api/users', async (route) => {
+      const request = route.request();
+      const url = new URL(request.url());
+
+      // 修改查询参数
+      url.searchParams.set('page', '2');
+
+      // 继续请求
+      const response = await route.fetch({ url: url.toString() });
+      const json = await response.json();
+
+      // 修改响应数据
+      json.push({ id: 999, name: 'Injected User' });
+
+      route.fulfill({
+        status: 200,
+        body: JSON.stringify(json),
+      });
+    });
+
+    await page.goto('/users');
+  });
+
+  test('should abort request', async ({ page }) => {
+    // 中止特定请求
+    await page.route('**/analytics/**', (route) => {
+      route.abort();
+    });
+
+    await page.goto('/dashboard');
+  });
+});
+```
+
+### 5.5 Visual Regression Testing
+
+```typescript
+// e2e/visual.spec.ts
+import { test, expect } from '@playwright/test';
+import * as fs from 'fs';
+
+// 使用 Playwright 内置截图功能进行视觉回归测试
+test.describe('Visual Regression', () => {
+  test('should match baseline screenshots', async ({ page }) => {
+    await page.goto('/dashboard');
+
+    // 全页面截图
+    await expect(page).toHaveScreenshot('dashboard.png', {
+      maxDiffPixelRatio: 0.1, // 允许 10% 的像素差异
+    });
+
+    // 元素截图
+    const header = page.locator('.app-header');
+    await expect(header).toHaveScreenshot('header.png', {
+      maxDiffPixelRatio: 0.05,
+    });
+  });
+
+  test('should handle dynamic content', async ({ page }) => {
+    await page.goto('/dashboard');
+
+    // 使用 ignore 选项排除动态内容
+    await expect(page).toHaveScreenshot('dashboard.png', {
+      ignore: [
+        '.timestamp',      // 忽略时间戳
+        '.analytics-data', // 忽略分析数据
+      ],
+    });
+  });
+});
+
+// 截图管理命令
+// npx playwright test --update-snapshots  更新基线截图
+// npx playwright show-report              查看测试报告
+```
+
+### 5.6 测试数据管理
+
+```typescript
+// e2e/fixtures.ts
+import { test as base, Page } from '@playwright/test';
+
+// 自定义 fixture
+export const testWithAuth = base.extend<{ authenticatedPage: Page }>({
+  authenticatedPage: async ({ page }, use) => {
+    // 登录
+    await page.goto('/login');
+    await page.fill('[name="username"]', 'admin');
+    await page.fill('[name="password"]', 'password');
+    await page.click('button[type="submit"]');
+    await page.waitForURL('/dashboard');
+
+    await use(page);
+
+    // 清理
+    await page.evaluate(() => localStorage.clear());
+  },
+});
+
+// 使用
+testWithAuth('should access protected route', async ({ authenticatedPage }) => {
+  await authenticatedPage.goto('/settings');
+  await expect(authenticatedPage.locator('h1')).toHaveText('设置');
+});
+```
+
+### 5.7 并行执行与 CI 集成
+
+```typescript
+// playwright.config.ts
+export default defineConfig({
+  // 并行执行
+  fullyParallel: true,        // 启用并行
+  workers: process.env.CI ? 4 : undefined, // CI 环境使用 4 个 worker
+
+  // 重试配置
+  retries: process.env.CI ? 2 : 0,
+
+  // 报告
+  reporter: [
+    ['html', { outputFolder: 'playwright-report' }],
+    ['json', { outputFile: 'test-results/results.json' }],
+  ],
+
+  // 全局超时
+  timeout: 30000,
+  expect: {
+    timeout: 5000,
+  },
+});
+```
+
+```yaml
+# .github/workflows/e2e.yml
+name: E2E Tests
+
+on: [push, pull_request]
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        shard: [1, 2, 3, 4]  # 分片执行
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Run E2E tests
+        run: npx playwright test --shard=${{ matrix.shard }}/${{ strategy.job.total }}
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-results-${{ matrix.shard }}
+          path: |
+            playwright-report/
+            test-results/
+```
+
 ---
 
 ## 六、测试覆盖率要求
@@ -516,7 +1117,7 @@ test.describe('用户管理', () => {
 | 分支覆盖率 | ≥ 60% | 条件分支覆盖 |
 | 函数覆盖率 | ≥ 80% | 每个函数都要测试 |
 
-### 6.2 覆盖率配置
+### 6.2 覆盖率配置详解
 
 ```typescript
 // vite.config.ts
@@ -524,16 +1125,123 @@ export default defineConfig({
   test: {
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'json', 'html'],
+      reporter: ['text', 'json', 'html', 'lcov'],
+
+      // 输出目录
+      reportsDirectory: 'coverage',
+
+      // 阈值配置（门禁要求）
       thresholds: {
+        // 全局阈值
         statements: 70,
         branches: 60,
         functions: 80,
         lines: 70,
+
+        // 按文件或目录设置阈值
+        perFile: true,
+        'src/utils/**/*.ts': {
+          statements: 90,
+          branches: 80,
+        },
+        'src/composables/**/*.ts': {
+          statements: 80,
+          branches: 70,
+        },
+
+        // 允许空覆盖率的阈值
+        allowEmptyCoverage: true,
       },
+
+      // 排除文件
+      exclude: [
+        'node_modules/',
+        'src/test/',
+        '**/*.d.ts',
+        '**/*.config.*',
+        '**/dist/',
+        '**/mock/**',
+        '**/mocks/**',
+      ],
+
+      // 包含文件
+      include: [
+        'src/**/*.{ts,tsx,vue}',
+      ],
     },
   },
 });
+```
+
+### 6.3 SonarQube 集成
+
+```typescript
+// vitest.config.ts (使用 @vitest/coverage-v8)
+export default defineConfig({
+  test: {
+    coverage: {
+      provider: 'v8',
+      reporter: ['lcov', 'cobertura'], // SonarQube 支持的格式
+      reportsDirectory: 'coverage',
+    },
+  },
+});
+```
+
+```json
+// sonar-project.properties
+sonar.sources=src
+sonar.tests=test
+sonar.test.inclusions=**/*.spec.ts,**/*.test.ts
+sonar.javascript.lcov.reportPaths=coverage/lcov.info
+sonar.typescript.tsconfigPath=tsconfig.json
+sonar.coverage.thresholds.line=70
+sonar.coverage.thresholds.branch=60
+```
+
+### 6.4 覆盖率门禁工作流
+
+```yaml
+# .github/workflows/coverage.yml
+name: Coverage Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests with coverage
+        run: npm run test:unit -- --coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage/lcov.info
+          fail_ci_if_error: true
+
+      - name: Check coverage thresholds
+        run: |
+          npx vitest run --coverage && coverage-threshold-check \
+            --branches 60 \
+            --functions 80 \
+            --lines 70 \
+            --statements 70
 ```
 
 ---

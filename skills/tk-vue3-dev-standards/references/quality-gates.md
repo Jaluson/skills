@@ -86,12 +86,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
           cache: 'npm'
 
       - name: Install dependencies
@@ -110,7 +110,173 @@ jobs:
         run: npm run test:e2e
 
       - name: Upload coverage
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
+```
+
+### 2.4 GitHub Actions 进阶配置
+
+```yaml
+# .github/workflows/ci.yml
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # 并行 Job 配置
+  lint-and-type:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Run type check
+        run: npm run type-check
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm run test:unit -- --coverage
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage/lcov.info
+
+  e2e-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        shard: [1, 2]  # 分片并行
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright
+        run: npx playwright install --with-deps
+
+      - name: Run E2E tests
+        run: npx playwright test --shard=${{ matrix.shard }}/${{ strategy.job.total }}
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-results-${{ matrix.shard }}
+          path: |
+            playwright-report/
+            test-results/
+```
+
+### 2.5 GitLab CI 配置
+
+```yaml
+# .gitlab-ci.yml
+stages:
+  - lint
+  - test
+  - build
+  - deploy
+
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - node_modules/
+
+variables:
+  NODE_VERSION: '20'
+
+before_script:
+  - npm ci --cache .npm --prefer-offline
+
+lint:
+  stage: lint
+  script:
+    - npm run lint
+    - npm run type-check
+  allow_failure: false
+
+unit-test:
+  stage: test
+  script:
+    - npm run test:unit -- --coverage
+  coverage: /All files[^|]*\|[^|]*\|[^|]*\s+([0-9]{1,3})/
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage/cobertura-coverage.xml
+    paths:
+      - coverage/
+  allow_failure: false
+
+e2e-test:
+  stage: test
+  services:
+    - docker:dind
+  script:
+    - npm ci
+    - npx playwright install --with-deps
+    - npx playwright test
+  artifacts:
+    when: always()
+    paths:
+      - playwright-report/
+      - test-results/
+  allow_failure: true
+
+build:
+  stage: build
+  script:
+    - npm run build
+  artifacts:
+    paths:
+      - dist/
+  only:
+    - main
+    - develop
+
+deploy:
+  stage: deploy
+  script:
+    - npm run deploy
+  only:
+    - main
+  when: manual
 ```
 
 ---
@@ -138,19 +304,123 @@ jobs:
 }
 ```
 
-### 3.3 环境变量安全
+### 3.3 npm audit 集成
 
-```typescript
-// ✅ 正确：敏感信息使用环境变量
-const apiKey = import.meta.env.VITE_API_KEY;
+```yaml
+# .github/workflows/security.yml
+name: Security Audit
 
-// ❌ 错误：硬编码敏感信息
-const apiKey = 'sk-xxxx-xxxx-xxxx';
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 0 * * 0'  # 每周检查
 
-// ✅ 正确：生产环境验证环境变量
-if (import.meta.env.PROD && !import.meta.env.VITE_API_BASE_URL) {
-  throw new Error('VITE_API_BASE_URL is required in production');
-}
+jobs:
+  security:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
+      - name: Check for vulnerabilities
+        run: |
+          npm audit --json > audit-results.json
+          # 检查是否有高危漏洞
+          if grep -q '"severity":"high"' audit-results.json; then
+            echo "High severity vulnerabilities found!"
+            exit 1
+          fi
+```
+
+### 3.4 Snyk 集成
+
+```yaml
+# .github/workflows/snyk.yml
+name: Snyk Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  snyk:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Snyk to check for vulnerabilities
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high --fail-on=all
+```
+
+### 3.5 Dependabot 配置
+
+```yaml
+# .github/dependabot.yml
+version: 2
+updates:
+  # npm 依赖更新
+  - package-ecosystem: 'npm'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: 'deps'
+    labels:
+      - 'dependencies'
+    reviewers:
+      - team: frontend
+    groups:
+      production-dependencies:
+        dependency-type: 'production'
+        update-types:
+          - 'major'
+          - 'minor'
+      development-dependencies:
+        dependency-type: 'development'
+        update-types:
+          - 'major'
+          - 'minor'
+          - 'patch'
+
+  # GitHub Actions 更新
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+    open-pull-requests-limit: 5
+```
+
+### 3.6 锁文件重要性
+
+```bash
+# ✅ 使用 package-lock.json 确保依赖一致性
+npm ci  # 优先使用 npm ci 而不是 npm install
+# npm ci 完全按照 lock 文件安装，确保团队成员环境一致
+
+# ❌ 不要删除 package-lock.json
+# ❌ 不要跳过 lock 文件提交
+# ❌ 不要在不同环境间混用 yarn.lock 和 package-lock.json
 ```
 
 ---
@@ -206,16 +476,39 @@ module.exports = {
 };
 ```
 
-### 4.3 Husky 配置
+### 4.3 Husky v9 配置（最佳实践）
+
+```bash
+# 安装 Husky
+npm install -D husky
+
+# 初始化
+npx husky init
+
+# 添加 pre-commit hook
+echo 'npm run lint && npm run type-check && npm run test:unit' > .husky/pre-commit
+
+# 添加 commit-msg hook
+echo 'npx commitlint --edit' > .husky/commit-msg
+```
 
 ```json
 // package.json
 {
   "husky": {
     "hooks": {
-      "pre-commit": "npm run lint && npm run type-check && npm run test",
+      "pre-commit": "npm run lint && npm run type-check && npm run test:unit",
       "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
     }
+  },
+  "lint-staged": {
+    "*.{vue,ts,tsx,js,jsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{css,scss,sass}": [
+      "prettier --write"
+    ]
   }
 }
 ```

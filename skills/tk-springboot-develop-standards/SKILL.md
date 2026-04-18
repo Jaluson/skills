@@ -2,7 +2,7 @@
 name: tk-springboot-develop-standards
 description: |
   Spring Boot 开发全面规约技能。当用户讨论 Spring Boot 项目开发、Java 代码规范、Spring 项目架构、分层设计、RESTful API 开发、数据库操作、日志规范、异常处理、单元测试编写等场景时触发。适用于代码审查、开发规约检查、Spring Boot 项目结构评审、API 设计评审等任务。
-version: 1.1.0
+version: 1.2.0
 ---
 
 # Spring Boot 开发规约
@@ -23,7 +23,7 @@ version: 1.1.0
 
 ---
 
-## 十一、任务文档输出要求
+## 任务文档输出要求（前置规约）
 
 ### 11.1 文档输出范围
 
@@ -790,9 +790,256 @@ public class UserController {
 
 ---
 
+## 十一、现代化特性
+
+### 11.1 虚拟线程集成
+
+虚拟线程（Virtual Threads）显著降低线程内存开销，适合 I/O 密集型任务：
+
+```yaml
+# application.yml 配置虚拟线程平台
+spring:
+  threads:
+    virtual:
+      enabled: true
+```
+
+```java
+// 代码中使用虚拟线程
+@Bean
+public ExecutorService virtualThreadExecutor() {
+    return Executors.newVirtualThreadPerTaskExecutor();
+}
+```
+
+**虚拟线程下的线程池配置：**
+
+```java
+// 虚拟线程下不再需要大线程池
+@Configuration
+public class VirtualThreadConfig {
+    @Bean
+    public TaskExecutor virtualThreadTaskExecutor() {
+        // 虚拟线程适用于 I/O 密集型任务
+        return new TaskExecutor() {
+            private final ExecutorService executor = 
+                Executors.newVirtualThreadPerTaskExecutor();
+            
+            @Override
+            public void execute(Runnable task) {
+                executor.execute(task);
+            }
+        };
+    }
+}
+```
+
+### 11.2 GraalVM 原生镜像支持
+
+Spring Boot 原生支持 GraalVM 编译，显著提升启动速度：
+
+```xml
+<!-- pom.xml -->
+<plugin>
+    <groupId>org.graalvm.buildtools</groupId>
+    <artifactId>native-maven-plugin</artifactId>
+</plugin>
+```
+
+**AOT 编译配置：**
+
+```yaml
+# AOT 编译配置
+spring:
+  aot:
+    enabled: true
+```
+
+### 11.3 声明式 HTTP Interface
+
+```java
+// 定义声明式 HTTP 客户端
+@HttpExchange("/api/users")
+public interface UserRestClient {
+
+    @GetExchange("/{id}")
+    UserVO getUser(@PathVariable("id") Long id);
+
+    @PostExchange
+    UserVO createUser(@RequestBody CreateUserRequest request);
+
+    @PutExchange("/{id}")
+    UserVO updateUser(@PathVariable("id") Long id, @RequestBody UpdateUserRequest request);
+
+    @DeleteExchange("/{id}")
+    void deleteUser(@PathVariable("id") Long id);
+}
+
+// 注册 HTTP Interface
+@Configuration
+public class RestClientConfig {
+
+    @Bean
+    UserRestClient userRestClient(RestClient restClient) {
+        return HttpServiceProxyFactory
+                .builderFor(RestClientAdapter.create(restClient))
+                .build()
+                .createClient(UserRestClient.class);
+    }
+}
+```
+
+### 11.4 Jakarta EE 迁移
+
+Spring Boot 使用 Jakarta EE：
+
+| 旧 API | 新 API |
+|--------|--------|
+| javax.servlet.* | jakarta.servlet.* |
+| javax.persistence.* | jakarta.persistence.* |
+| javax.validation.* | jakarta.validation.* |
+| javax.transaction.* | jakarta.transaction.* |
+
+```java
+// 使用 jakarta 前缀
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.persistence.Entity;
+import jakarta.validation.constraints.NotNull;
+```
+
+### 11.5 Records 作为 DTO/VO
+
+Records 适合作为不可变 DTO/VO：
+
+```java
+// Record 作为请求 DTO
+public record CreateUserRequest(
+    @NotBlank String username,
+    @Email String email,
+    @Size(min = 6) String password
+) {}
+
+// Record 作为响应 VO
+public record UserVO(
+    Long id,
+    String username,
+    String email,
+    LocalDateTime createTime
+) {}
+
+// Record 作为结果封装
+public record Result<T>(
+    int code,
+    String message,
+    T data
+) {
+    public static <T> Result<T> success(T data) {
+        return new Result<>(200, "success", data);
+    }
+    
+    public static <T> Result<T> error(int code, String message) {
+        return new Result<>(code, message, null);
+    }
+}
+
+// 使用处
+@RestController
+public class UserController {
+    @PostMapping
+    public Result<UserVO> createUser(@Valid @RequestBody CreateUserRequest request) {
+        // 直接使用 record
+        return Result.success(userService.createUser(request));
+    }
+}
+```
+
+### 11.6 Pattern Matching for switch 增强
+
+```java
+// switch pattern matching
+sealed interface Shape permits Circle, Rectangle, Square {}
+record Circle(double radius) implements Shape {}
+record Rectangle(double width, double height) implements Shape {}
+record Square(double side) implements Shape {}
+
+double calculateArea(Shape shape) {
+    return switch (shape) {
+        case Circle(double r) -> Math.PI * r * r;
+        case Rectangle(double w, double h) -> w * h;
+        case Square(double s) -> s * s;
+        case null -> 0.0;
+    };
+}
+
+// 运行时类型检查
+Object obj = getShape();
+String description = switch (obj) {
+    case Circle c -> "Circle with radius " + c.radius();
+    case Rectangle r -> "Rectangle " + r.width() + "x" + r.height();
+    case String s -> "String: " + s;
+    default -> "Unknown shape";
+};
+```
+
+---
+
+## 十二、现代化开发工具
+
+### 12.1 构造方法绑定（Constructor Binding）最佳实践
+
+```java
+// 配置属性类使用构造方法绑定
+@ConfigurationProperties(prefix = "app")
+public record AppProperties(
+    @NotBlank String name,
+    @Min(1) @Max(65535) int port,
+    @Email String adminEmail,
+    List<String> allowedOrigins
+) {}
+
+// 启用构造方法绑定
+@EnableConfigurationProperties(AppProperties.class)
+@SpringBootApplication
+public class Application {
+    public static void main(String[] args) {
+        SpringApplication.run(Application.class, args);
+    }
+}
+
+// application.yml
+app:
+  name: my-application
+  port: 8080
+  admin-email: admin@example.com
+  allowed-origins:
+    - https://example.com
+    - https://app.example.com
+```
+
+### 12.2 自动化配置增强
+
+```java
+// 自定义自动配置
+@Configuration(proxyBeanMethods = false)
+@AutoConfigureBefore(UserServiceAutoConfiguration.class)
+@AutoConfigureAfter(DataSourceAutoConfiguration.class)
+public class CustomAutoConfiguration {
+    @Bean
+    @ConditionalOnMissingBean
+    public CustomService customService() {
+        return new CustomService();
+    }
+}
+
+// 在 META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports 中注册
+```
+
+---
+
 ## 关联文件
 
 - `references/architecture.md` - 架构设计详细规范
 - `references/code-standards.md` - 代码编写规范详解
 - `references/testing.md` - 测试规范详解
 - `references/quality-gates.md` - 质量门禁标准
+- `references/modern-java-features.md` - Java 8~25 & Spring Boot 3/4 新特性速查
