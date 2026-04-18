@@ -1,0 +1,25 @@
+{
+  "expectations": [
+    {
+      "text": "指出 Controller 层不应包含业务逻辑校验",
+      "passed": true,
+      "evidence": "发现参数校验方式不符合规约，建议使用 @Valid/@Validated 注解进行参数校验"
+    },
+    {
+      "text": "指出应使用构造方法注入替代 @Autowired 字段注入",
+      "passed": true,
+      "evidence": "严重问题中明确指出：字段注入违反规约，应使用构造方法注入"
+    },
+    {
+      "text": "指出 addUser 方法命名应改为 createUser 符合 RESTful 规范",
+      "passed": true,
+      "evidence": "发现 RESTful API URL 规范不符合，创建用户应使用 POST /users 而非 POST /users/add"
+    }
+  ],
+  "summary": {
+    "passed": 3,
+    "failed": 0,
+    "total": 3,
+    "pass_rate": 1.0
+  }
+}

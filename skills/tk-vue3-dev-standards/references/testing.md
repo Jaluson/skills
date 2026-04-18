@@ -1,49 +1,20 @@
-# Vue 3 测试策略
+# Vue 3 测试规范详解
 
-## 目录
+## 一、测试框架选择
 
-- [测试分层体系](#测试分层体系)
-- [测试框架选型](#测试框架选型)
-- [组件测试](#组件测试)
-- [Composable 测试](#composable-测试)
-- [Store 测试](#store-测试)
-- [工具函数测试](#工具函数测试)
-- [测试在流水线中的位置](#测试在流水线中的位置)
+| 测试类型 | 推荐框架 | 说明 |
+|----------|----------|------|
+| 单元测试 | Vitest | Vue 官方推荐，Vite 原生支持 |
+| 组件测试 | Vue Test Utils + Vitest | 测试 Vue 组件 |
+| E2E 测试 | Playwright / Cypress | 端到端测试 |
 
----
+### 1.1 Vitest 配置
 
-## 测试分层体系
-
-```
-        ┌─────────────┐
-        │   E2E 测试   │  ← 少量，覆盖核心用户路径
-        │  （Playwright）│
-        └──────┬──────┘
-               │
-      ┌────────┴────────┐
-      │   集成测试        │  ← 适量，覆盖组件交互和模块集成
-      │（Vue Test Utils） │
-      └────────┬────────┘
-               │
-   ┌───────────┴───────────┐
-   │   单元测试              │  ← 大量，覆盖 composable、utils、store
-   │（Vitest + Vue Test Utils）│
-   └───────────────────────┘
-```
-
-**投资比例**：单元测试 70% + 集成测试 20% + E2E 测试 10%
-
----
-
-## 测试框架选型
-
-### 推荐配置
-
-```ts
-// vitest.config.ts
-import { defineConfig } from 'vitest/config'
-import vue from '@vitejs/plugin-vue'
-import { resolve } from 'path'
+```typescript
+// vite.config.ts
+import { defineConfig } from 'vite';
+import vue from '@vitejs/plugin-vue';
+import { resolve } from 'path';
 
 export default defineConfig({
   plugins: [vue()],
@@ -55,404 +26,547 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
+    setupFiles: ['./src/test/setup.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
-      include: ['src/**/*.{ts,vue}'],
-      exclude: ['src/**/*.d.ts', 'src/main.ts', 'src/router/index.ts'],
+      exclude: [
+        'node_modules/',
+        'src/test/',
+      ],
     },
   },
-})
+});
 ```
 
-### 依赖清单
+```typescript
+// src/test/setup.ts
+import { config } from '@vue/test-utils';
+import { createPinia, setActivePinia } from 'pinia';
 
-```json
-{
-  "devDependencies": {
-    "vitest": "^2.x",
-    "@vue/test-utils": "^2.x",
-    "@vitest/coverage-v8": "^2.x",
-    "jsdom": "^24.x",
-    "msw": "^2.x"
+// 创建测试用 Pinia
+beforeEach(() => {
+  setActivePinia(createPinia());
+});
+
+// 全局组件注册（如果需要）
+config.global.stubs = {
+  teleport: true,
+};
+```
+
+---
+
+## 二、单元测试规范
+
+### 2.1 测试文件组织
+
+```
+src/
+├── components/
+│   └── UserCard.vue
+├── composables/
+│   └── usePagination.ts
+├── stores/
+│   └── user.ts
+└── test/
+    ├── components/
+    │   └── UserCard.spec.ts
+    ├── composables/
+    │   └── usePagination.spec.ts
+    └── stores/
+        └── user.spec.ts
+```
+
+### 2.2 Composables 单元测试
+
+```typescript
+// composables/usePagination.ts
+export function usePagination<T>(
+  fetchFn: (params: any) => Promise<{ list: T[]; total: number }>
+) {
+  const loading = ref(false);
+  const list = ref<T[]>([]) as Ref<T[]>;
+  const pagination = reactive({
+    page: 1,
+    pageSize: 10,
+    total: 0,
+  });
+
+  async function loadData() {
+    loading.value = true;
+    try {
+      const result = await fetchFn({ ...pagination });
+      list.value = result.list;
+      pagination.total = result.total;
+    } finally {
+      loading.value = false;
+    }
   }
+
+  function reset() {
+    pagination.page = 1;
+    loadData();
+  }
+
+  return { loading, list, pagination, loadData, reset };
 }
 ```
 
----
+```typescript
+// composables/usePagination.spec.ts
+import { describe, it, expect, vi } from 'vitest';
+import { usePagination } from '@/composables/usePagination';
 
-## 组件测试
+describe('usePagination', () => {
+  const mockFetchFn = vi.fn();
 
-### 什么时候需要测试
+  it('should initialize with default values', () => {
+    const { loading, list, pagination } = usePagination(mockFetchFn);
 
-| 组件类型 | 是否需要测试 | 测试重点 |
-|----------|------------|---------|
-| 通用组件 | 必须 | props 渲染、事件触发、插槽、边界情况 |
-| 业务组件（有逻辑） | 推荐 | 用户交互 → 状态变更 → UI 更新的完整路径 |
-| 页面组件 | 按需 | 路由集成、数据加载（通常交给 E2E） |
-| 纯展示组件（无逻辑） | 可选 | 快照测试即可 |
+    expect(loading.value).toBe(false);
+    expect(list.value).toEqual([]);
+    expect(pagination.page).toBe(1);
+    expect(pagination.pageSize).toBe(10);
+    expect(pagination.total).toBe(0);
+  });
 
-### 展示型组件测试
+  it('should fetch data successfully', async () => {
+    const mockData = {
+      list: [{ id: 1, name: 'Test' }],
+      total: 1,
+    };
+    mockFetchFn.mockResolvedValue(mockData);
 
-```ts
-// shared/components/StatusBadge.test.ts
-import { describe, it, expect } from 'vitest'
-import { render } from '@testing-library/vue'
-import StatusBadge from './StatusBadge.vue'
+    const { loading, list, pagination, loadData } = usePagination(mockFetchFn);
 
-describe('StatusBadge', () => {
-  it('渲染 active 状态的文本和样式', () => {
-    const { container, getByText } = render(StatusBadge, {
-      props: { status: 'active' },
-    })
-    expect(getByText('活跃')).toBeTruthy()
-    expect(container.querySelector('.badge--success')).toBeTruthy()
-  })
+    const promise = loadData();
+    expect(loading.value).toBe(true);
 
-  it('隐藏文本时只渲染徽标', () => {
-    const { container } = render(StatusBadge, {
-      props: { status: 'active', showText: false },
-    })
-    expect(container.textContent).toBe('')
-    expect(container.querySelector('.badge')).toBeTruthy()
-  })
+    await promise;
+    expect(loading.value).toBe(false);
+    expect(list.value).toEqual(mockData.list);
+    expect(pagination.total).toBe(1);
+  });
 
-  it('支持不同尺寸', () => {
-    const { container } = render(StatusBadge, {
-      props: { status: 'active', size: 'sm' },
-    })
-    expect(container.querySelector('.badge--sm')).toBeTruthy()
-  })
-})
-```
+  it('should reset pagination on reset()', async () => {
+    const mockData = {
+      list: [{ id: 1, name: 'Test' }],
+      total: 1,
+    };
+    mockFetchFn.mockResolvedValue(mockData);
 
-### 交互型组件测试
+    const { pagination, loadData, reset } = usePagination(mockFetchFn);
 
-```ts
-// shared/components/DropdownMenu.test.ts
-import { describe, it, expect, vi } from 'vitest'
-import { render, fireEvent } from '@testing-library/vue'
-import DropdownMenu from './DropdownMenu.vue'
+    await loadData();
+    expect(pagination.page).toBe(1);
 
-const items = [
-  { id: '1', name: '选项一' },
-  { id: '2', name: '选项二' },
-]
+    pagination.page = 2;
+    reset();
 
-describe('DropdownMenu', () => {
-  it('点击后展开选项列表', async () => {
-    const { container, getByText } = render(DropdownMenu, {
-      props: { items, itemKey: 'id' },
-    })
-
-    // 初始状态：选项不可见
-    expect(container.querySelector('.dropdown--open')).toBeNull()
-
-    // 点击触发器
-    await fireEvent.click(getByText('请选择'))
-
-    // 展开后：选项可见
-    expect(getByText('选项一')).toBeTruthy()
-    expect(getByText('选项二')).toBeTruthy()
-  })
-
-  it('选择一个选项后关闭并发送事件', async () => {
-    const onSelect = vi.fn()
-    const { getByText } = render(DropdownMenu, {
-      props: { items, itemKey: 'id' },
-      attrs: { onSelect },
-    })
-
-    await fireEvent.click(getByText('请选择'))
-    await fireEvent.click(getByText('选项一'))
-
-    expect(onSelect).toHaveBeenCalledWith(items[0])
-  })
-})
-```
-
-### 表单组件测试
-
-```ts
-// features/user/components/UserForm.test.ts
-import { describe, it, expect, vi } from 'vitest'
-import { render, fireEvent } from '@testing-library/vue'
-import UserForm from './UserForm.vue'
-
-describe('UserForm', () => {
-  it('空表单提交不发送事件，显示校验错误', async () => {
-    const onSubmit = vi.fn()
-    const { getByText, container } = render(UserForm, {
-      attrs: { onSubmit },
-    })
-
-    await fireEvent.click(getByText('提交'))
-
-    expect(onSubmit).not.toHaveBeenCalled()
-    // 应该出现校验提示
-    expect(container.textContent).toContain('必填')
-  })
-
-  it('填写有效数据后提交发送正确的事件', async () => {
-    const onSubmit = vi.fn()
-    const { getByText, getByLabelText } = render(UserForm, {
-      attrs: { onSubmit },
-    })
-
-    await fireEvent.update(getByLabelText('用户名'), '张三')
-    await fireEvent.update(getByLabelText('邮箱'), 'zhangsan@test.com')
-    await fireEvent.click(getByText('提交'))
-
-    expect(onSubmit).toHaveBeenCalledWith(
-      expect.objectContaining({
-        name: '张三',
-        email: 'zhangsan@test.com',
-      })
-    )
-  })
-
-  it('编辑模式回填初始数据', async () => {
-    const { getByLabelText } = render(UserForm, {
-      props: {
-        initialData: { name: '李四', email: 'lisi@test.com' },
-      },
-    })
-
-    expect((getByLabelText('用户名') as HTMLInputElement).value).toBe('李四')
-    expect((getByLabelText('邮箱') as HTMLInputElement).value).toBe('lisi@test.com')
-  })
-})
+    expect(mockFetchFn).toHaveBeenCalledWith({
+      page: 1,
+      pageSize: 10,
+      total: 1,
+    });
+  });
+});
 ```
 
 ---
 
-## Composable 测试
+## 三、组件测试规范
 
-Composable 是纯逻辑，最容易测试，也是投入产出比最高的测试类型。
+### 3.1 组件测试示例
 
-### 基础数据获取 composable
+```vue
+<!-- components/UserCard.vue -->
+<template>
+  <div class="user-card" :class="{ 'user-card--active': isActive }">
+    <header class="user-card__header">
+      <h3>{{ title }}</h3>
+      <span class="user-card__status">{{ statusText }}</span>
+    </header>
 
-```ts
-// composables/useUser.test.ts
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { useUser } from './useUser'
+    <main class="user-card__body">
+      <div v-for="item in items" :key="item.id" class="user-card__item">
+        {{ item.name }}
+      </div>
+    </main>
 
-// mock API
-vi.mock('@/api/user', () => ({
-  getUserInfo: vi.fn(),
-}))
+    <footer class="user-card__footer">
+      <el-button @click="handleConfirm">确认</el-button>
+      <el-button @click="handleDelete(itemId)">删除</el-button>
+    </footer>
+  </div>
+</template>
 
-import { getUserInfo } from '@/api/user'
+<script setup lang="ts">
+interface Props {
+  title: string;
+  items: { id: number; name: string }[];
+  status: 'pending' | 'success' | 'error';
+  isActive?: boolean;
+}
 
-describe('useUser', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
+interface Emits {
+  (e: 'confirm'): void;
+  (e: 'delete', id: number): void;
+}
 
-  it('初始状态为 loading', () => {
-    const mockUser = { id: '1', name: '张三' }
-    vi.mocked(getUserInfo).mockReturnValue(new Promise(() => {})) // 永远 pending
+const props = withDefaults(defineProps<Props>(), {
+  isActive: false,
+});
 
-    const { loading, user, error } = useUser(ref('1'))
+const emit = defineEmits<Emits>();
 
-    expect(loading.value).toBe(true)
-    expect(user.value).toBeNull()
-    expect(error.value).toBeNull()
-  })
+const itemId = computed(() => props.items[0]?.id ?? 0);
 
-  it('加载成功后设置 user 和 loading', async () => {
-    const mockUser = { id: '1', name: '张三' }
-    vi.mocked(getUserInfo).mockResolvedValue(mockUser)
+const statusText = computed(() => {
+  const map = { pending: '处理中', success: '成功', error: '失败' };
+  return map[props.status];
+});
 
-    const { user, loading } = useUser(ref('1'))
+function handleConfirm() {
+  emit('confirm');
+}
 
-    await vi.waitFor(() => {
-      expect(loading.value).toBe(false)
-    })
-
-    expect(user.value).toEqual(mockUser)
-  })
-
-  it('加载失败后设置 error', async () => {
-    vi.mocked(getUserInfo).mockRejectedValue(new Error('网络错误'))
-
-    const { error, loading } = useUser(ref('1'))
-
-    await vi.waitFor(() => {
-      expect(loading.value).toBe(false)
-    })
-
-    expect(error.value).toBeInstanceOf(Error)
-    expect(error.value!.message).toBe('网络错误')
-  })
-})
+function handleDelete(id: number) {
+  emit('delete', id);
+}
+</script>
 ```
 
-### 表单 composable 测试
+```typescript
+// components/UserCard.spec.ts
+import { describe, it, expect, vi } from 'vitest';
+import { mount } from '@vue/test-utils';
+import UserCard from './UserCard.vue';
 
-```ts
-// composables/useOrderForm.test.ts
-import { describe, it, expect } from 'vitest'
-import { useOrderForm } from './useOrderForm'
+describe('UserCard', () => {
+  const defaultProps = {
+    title: '测试标题',
+    items: [
+      { id: 1, name: '项目一' },
+      { id: 2, name: '项目二' },
+    ],
+    status: 'pending' as const,
+    isActive: false,
+  };
 
-describe('useOrderForm', () => {
-  it('初始状态为空表单', () => {
-    const { form, errors } = useOrderForm()
-    expect(form.name).toBe('')
-    expect(errors.value).toEqual({})
-  })
+  describe('Props', () => {
+    it('should render title correctly', () => {
+      const wrapper = mount(UserCard, {
+        props: defaultProps,
+      });
 
-  it('验证失败时填充 errors', () => {
-    const { validate, errors } = useOrderForm()
-    const valid = validate()
-    expect(valid).toBe(false)
-    expect(Object.keys(errors.value).length).toBeGreaterThan(0)
-  })
+      expect(wrapper.find('h3').text()).toBe('测试标题');
+    });
 
-  it('reset 恢复初始状态', () => {
-    const { form, reset } = useOrderForm()
-    form.name = '测试订单'
-    reset()
-    expect(form.name).toBe('')
-  })
+    it('should render items list', () => {
+      const wrapper = mount(UserCard, {
+        props: defaultProps,
+      });
 
-  it('传入 initialData 时正确回填', () => {
-    const initial = { name: '已有订单', quantity: 5 }
-    const { form } = useOrderForm(initial)
-    expect(form.name).toBe('已有订单')
-    expect(form.quantity).toBe(5)
-  })
-})
+      const items = wrapper.findAll('.user-card__item');
+      expect(items).toHaveLength(2);
+      expect(items[0].text()).toBe('项目一');
+    });
+
+    it('should display correct status text', () => {
+      const wrapper = mount(UserCard, {
+        props: { ...defaultProps, status: 'success' },
+      });
+
+      expect(wrapper.find('.user-card__status').text()).toBe('成功');
+    });
+
+    it('should apply active class when isActive is true', () => {
+      const wrapper = mount(UserCard, {
+        props: { ...defaultProps, isActive: true },
+      });
+
+      expect(wrapper.find('.user-card').classes()).toContain('user-card--active');
+    });
+  });
+
+  describe('Events', () => {
+    it('should emit confirm event on confirm button click', async () => {
+      const wrapper = mount(UserCard, {
+        props: defaultProps,
+      });
+
+      await wrapper.find('button:contains("确认")').trigger('click');
+
+      expect(wrapper.emitted('confirm')).toBeDefined();
+      expect(wrapper.emitted('confirm')!).toHaveLength(1);
+    });
+
+    it('should emit delete event with item id on delete button click', async () => {
+      const wrapper = mount(UserCard, {
+        props: defaultProps,
+      });
+
+      await wrapper.find('button:contains("删除")').trigger('click');
+
+      expect(wrapper.emitted('delete')).toBeDefined();
+      expect(wrapper.emitted('delete')![0]).toEqual([1]);
+    });
+  });
+});
 ```
 
 ---
 
-## Store 测试
+## 四、Store 测试规范
 
-```ts
-// stores/user.test.ts
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { setActivePinia, createPinia } from 'pinia'
-import { useUserStore } from './user'
+### 4.1 Store 测试示例
 
-vi.mock('@/api/user', () => ({
-  loginApi: vi.fn(),
-  getUserInfo: vi.fn(),
-}))
+```typescript
+// stores/user.ts
+export const useUserStore = defineStore('user', () => {
+  const userInfo = ref<UserInfo | null>(null);
+  const token = ref<string>('');
 
-import { loginApi, getUserInfo } from '@/api/user'
+  const isLoggedIn = computed(() => !!token.value);
+  const username = computed(() => userInfo.value?.username ?? '');
+
+  function setUserInfo(info: UserInfo) {
+    userInfo.value = info;
+  }
+
+  function setToken(newToken: string) {
+    token.value = newToken;
+  }
+
+  function logout() {
+    userInfo.value = null;
+    token.value = '';
+  }
+
+  return {
+    userInfo,
+    token,
+    isLoggedIn,
+    username,
+    setUserInfo,
+    setToken,
+    logout,
+  };
+});
+```
+
+```typescript
+// stores/user.spec.ts
+import { describe, it, expect, vi } from 'vitest';
+import { setActivePinia, createPinia } from 'pinia';
+import { useUserStore } from '@/stores/user';
 
 describe('useUserStore', () => {
   beforeEach(() => {
-    setActivePinia(createPinia())
-    vi.clearAllMocks()
-  })
+    setActivePinia(createPinia());
+  });
 
-  it('login 成功后设置 token 和 user', async () => {
-    vi.mocked(loginApi).mockResolvedValue({
-      token: 'test-token',
-      user: { id: '1', name: '张三' },
-    })
+  describe('State', () => {
+    it('should initialize with empty state', () => {
+      const userStore = useUserStore();
 
-    const store = useUserStore()
-    await store.login({ username: 'zhangsan', password: '123456' })
+      expect(userStore.userInfo).toBeNull();
+      expect(userStore.token).toBe('');
+      expect(userStore.isLoggedIn).toBe(false);
+    });
+  });
 
-    expect(store.token).toBe('test-token')
-    expect(store.isLoggedIn).toBe(true)
-  })
+  describe('Actions', () => {
+    it('should set user info correctly', () => {
+      const userStore = useUserStore();
+      const mockUserInfo = {
+        id: 1,
+        username: 'testuser',
+        email: 'test@example.com',
+      };
 
-  it('logout 清除所有状态', async () => {
-    vi.mocked(loginApi).mockResolvedValue({
-      token: 'test-token',
-      user: { id: '1', name: '张三' },
-    })
+      userStore.setUserInfo(mockUserInfo);
 
-    const store = useUserStore()
-    await store.login({ username: 'zhangsan', password: '123456' })
-    store.logout()
+      expect(userStore.userInfo).toEqual(mockUserInfo);
+      expect(userStore.username).toBe('testuser');
+    });
 
-    expect(store.token).toBeNull()
-    expect(store.currentUser).toBeNull()
-    expect(store.isLoggedIn).toBe(false)
-  })
-})
+    it('should set token correctly', () => {
+      const userStore = useUserStore();
+
+      userStore.setToken('mock-token-123');
+
+      expect(userStore.token).toBe('mock-token-123');
+      expect(userStore.isLoggedIn).toBe(true);
+    });
+
+    it('should logout and clear state', () => {
+      const userStore = useUserStore();
+
+      userStore.setUserInfo({ id: 1, username: 'test', email: 'test@test.com' });
+      userStore.setToken('token');
+      userStore.logout();
+
+      expect(userStore.userInfo).toBeNull();
+      expect(userStore.token).toBe('');
+      expect(userStore.isLoggedIn).toBe(false);
+    });
+  });
+
+  describe('Getters', () => {
+    it('should return username from userInfo', () => {
+      const userStore = useUserStore();
+      userStore.setUserInfo({ id: 1, username: 'admin', email: 'admin@test.com' });
+
+      expect(userStore.username).toBe('admin');
+    });
+
+    it('should return empty string when userInfo is null', () => {
+      const userStore = useUserStore();
+
+      expect(userStore.username).toBe('');
+    });
+  });
+});
 ```
 
 ---
 
-## 工具函数测试
+## 五、E2E 测试规范
 
-```ts
-// utils/format.test.ts
-import { describe, it, expect } from 'vitest'
-import { formatDate, formatCurrency } from './format'
+### 5.1 Playwright 配置
 
-describe('formatDate', () => {
-  it('格式化日期字符串', () => {
-    expect(formatDate('2024-01-15T10:30:00Z')).toBe('2024-01-15')
-  })
+```typescript
+// e2e/playwright.config.ts
+import { defineConfig, devices } from '@playwright/test';
 
-  it('处理空值', () => {
-    expect(formatDate(null)).toBe('')
-    expect(formatDate(undefined)).toBe('')
-  })
-})
+export default defineConfig({
+  testDir: './e2e',
+  fullyParallel: true,
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 1 : undefined,
+  reporter: 'html',
+  use: {
+    baseURL: 'http://localhost:5173',
+    trace: 'on-first-retry',
+  },
+  projects: [
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
+    },
+  ],
+  webServer: {
+    command: 'npm run dev',
+    url: 'http://localhost:5173',
+    reuseExistingServer: !process.env.CI,
+  },
+});
+```
 
-describe('formatCurrency', () => {
-  it('格式化金额', () => {
-    expect(formatCurrency(1234.5)).toBe('¥1,234.50')
-  })
+### 5.2 E2E 测试示例
 
-  it('处理零值', () => {
-    expect(formatCurrency(0)).toBe('¥0.00')
-  })
+```typescript
+// e2e/user.spec.ts
+import { test, expect } from '@playwright/test';
 
-  it('处理负数', () => {
-    expect(formatCurrency(-100)).toBe('-¥100.00')
-  })
-})
+test.describe('用户管理', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/user');
+  });
+
+  test('应该显示用户列表', async ({ page }) => {
+    await expect(page.locator('h1')).toHaveText('用户管理');
+
+    const rows = page.locator('.user-table__row');
+    await expect(rows.first()).toBeVisible();
+  });
+
+  test('应该能搜索用户', async ({ page }) => {
+    const searchInput = page.locator('input[placeholder="搜索用户"]');
+    await searchInput.fill('admin');
+    await page.locator('button:has-text("搜索")').click();
+
+    await expect(page.locator('.user-table__row')).toHaveCount(1);
+  });
+
+  test('应该能创建新用户', async ({ page }) => {
+    await page.locator('button:has-text("新增用户")').click();
+
+    await page.locator('input[v-model="form.username"]').fill('newuser');
+    await page.locator('input[v-model="form.email"]').fill('new@example.com');
+    await page.locator('button:has-text("保存")').click();
+
+    await expect(page.locator('.el-message')).toContainText('创建成功');
+  });
+});
 ```
 
 ---
 
-## 测试在流水线中的位置
+## 六、测试覆盖率要求
 
-### 阶段映射
+### 6.1 覆盖率指标
 
-| 流水线阶段 | 测试活动 | 何时执行 |
-|-----------|---------|---------|
-| P3 编码实现 | 新增 composable/utils 时同步编写单元测试 | 每个文件完成后 |
-| P4 编译验证 | 运行全量测试套件 `vitest run` | P4 编译验证通过后 |
-| P5 需求回验 | 验证测试覆盖了所有需求点 | P5 需求回验阶段 |
-| P6 最终审查 | 检查测试覆盖率报告 | P6 代码质量终审 |
+| 类型 | 目标 | 说明 |
+|------|------|------|
+| 行覆盖率 | ≥ 70% | 新增代码必须达标 |
+| 分支覆盖率 | ≥ 60% | 条件分支覆盖 |
+| 函数覆盖率 | ≥ 80% | 每个函数都要测试 |
 
-### P4 验证新增步骤
+### 6.2 覆盖率配置
 
-在 P4.1 执行验证命令中，类型检查和构建检查之后，增加测试运行：
-
-```bash
-# 4. 单元测试（如果有 vitest 配置）
-npx vitest run
+```typescript
+// vite.config.ts
+export default defineConfig({
+  test: {
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      thresholds: {
+        statements: 70,
+        branches: 60,
+        functions: 80,
+        lines: 70,
+      },
+    },
+  },
+});
 ```
 
-### 测试覆盖率要求
+---
 
-| 模块类型 | 最低行覆盖率 | 说明 |
-|----------|------------|------|
-| 通用组件 | 80% | 核心复用组件，必须充分测试 |
-| Composables | 80% | 纯逻辑，测试投入产出比最高 |
-| Store | 70% | 关注 action 副作用 |
-| Utils | 90% | 纯函数，测试最简单 |
-| 业务组件 | 50% | 重点测交互逻辑，不追求模板覆盖率 |
-| 页面组件 | 不强制 | 通常通过 E2E 覆盖 |
+## 七、测试命名规范
 
-### P6 交付输出新增项
+### 7.1 测试函数命名
 
-在交付输出中增加测试报告：
+```typescript
+// 描述性命名
+describe('usePagination', () => {
+  it('应该初始化为默认分页参数', () => { });
+  it('应该正确加载数据列表', () => { });
+  it('应该在加载失败时设置错误状态', () => { });
+  it('重置方法应该将页码重置为1', () => { });
+});
+
+// BDD 风格
+describe('UserCard', () => {
+  describe('Props', () => {
+    it('should render title correctly', () => { });
+  });
+
+  describe('Events', () => {
+    it('should emit confirm event', () => { });
+  });
+});
+```
+
+### 7.2 测试文件命名
 
 ```
-6. **测试报告**：
-   - 新增测试用例数 / 失败数
-   - 覆盖率摘要（如已配置）
-   - 未覆盖的关键逻辑说明（如有）
+xxx.spec.ts       # 单元测试
+xxx.e2e.ts        # E2E 测试
+xxx.integration.ts # 集成测试
 ```

@@ -1,0 +1,124 @@
+{
+  "metadata": {
+    "skill_name": "springboot-develop-standards",
+    "skill_path": "E:/Engineer/Projects/skills/skills/springboot-develop-standards",
+    "timestamp": "2026-04-18T00:00:00Z",
+    "evals_run": ["code-review", "unit-test-design", "db-design"],
+    "runs_per_configuration": 1
+  },
+  "runs": [
+    {
+      "eval_id": 1,
+      "eval_name": "code-review",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 3,
+        "failed": 0,
+        "total": 3,
+        "time_seconds": 59.5,
+        "tokens": 16783,
+        "errors": 0
+      }
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "code-review",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 3,
+        "failed": 0,
+        "total": 3,
+        "time_seconds": 45.8,
+        "tokens": 18046,
+        "errors": 0
+      }
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "unit-test-design",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 4,
+        "failed": 0,
+        "total": 4,
+        "time_seconds": 39.0,
+        "tokens": 18198,
+        "errors": 0
+      }
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "unit-test-design",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 4,
+        "failed": 0,
+        "total": 4,
+        "time_seconds": 32.4,
+        "tokens": 9781,
+        "errors": 0
+      }
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "db-design",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.8,
+        "passed": 4,
+        "failed": 1,
+        "total": 5,
+        "time_seconds": 66.5,
+        "tokens": 16497,
+        "errors": 0
+      }
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "db-design",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 5,
+        "failed": 0,
+        "total": 5,
+        "time_seconds": 29.0,
+        "tokens": 12675,
+        "errors": 0
+      }
+    }
+  ],
+  "run_summary": {
+    "with_skill": {
+      "pass_rate": {"mean": 0.93, "stddev": 0.1, "min": 0.8, "max": 1.0},
+      "time_seconds": {"mean": 55.0, "stddev": 11.5, "min": 39.0, "max": 66.5},
+      "tokens": {"mean": 17159, "stddev": 595, "min": 16497, "max": 18198}
+    },
+    "without_skill": {
+      "pass_rate": {"mean": 1.0, "stddev": 0.0, "min": 1.0, "max": 1.0},
+      "time_seconds": {"mean": 35.7, "stddev": 6.9, "min": 29.0, "max": 45.8},
+      "tokens": {"mean": 13501, "stddev": 3375, "min": 9781, "max": 18046}
+    },
+    "delta": {
+      "pass_rate": "-0.07",
+      "time_seconds": "+19.3",
+      "tokens": "+3658"
+    }
+  },
+  "notes": [
+    "with_skill 在 code-review 和 unit-test 上与 without_skill 持平",
+    "db-design 测试中 with_skill 使用了 sys_user 而非 t_user 命名，导致 1 个断言失败",
+    "with_skill 消耗更多 tokens 和时间，但 pass_rate 略低",
+    "without_skill 表现更好可能因为没有额外规约信息的干扰，更直接地解决问题"
+  ]
+}

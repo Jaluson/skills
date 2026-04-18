@@ -1,0 +1,91 @@
+{
+  "skill_name": "tk-vue3-dev-standards",
+  "iteration": 1,
+  "timestamp": "2026-04-18T00:00:00Z",
+  "results": [
+    {
+      "eval_id": 0,
+      "eval_name": "vue-component-review",
+      "config": "with_skill",
+      "pass_rate": 1.0,
+      "timing": {
+        "total_tokens": 20439,
+        "duration_ms": 171991
+      }
+    },
+    {
+      "eval_id": 0,
+      "eval_name": "vue-component-review",
+      "config": "without_skill",
+      "pass_rate": 0.0,
+      "timing": {
+        "total_tokens": 17694,
+        "duration_ms": 192090
+      }
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "pinia-store-design",
+      "config": "with_skill",
+      "pass_rate": 1.0,
+      "timing": {
+        "total_tokens": 16158,
+        "duration_ms": 70155
+      }
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "pinia-store-design",
+      "config": "without_skill",
+      "pass_rate": 1.0,
+      "timing": {
+        "total_tokens": 15673,
+        "duration_ms": 71564
+      }
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "vitest-unit-test",
+      "config": "with_skill",
+      "pass_rate": 1.0,
+      "timing": {
+        "total_tokens": 30997,
+        "duration_ms": 171576
+      }
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "vitest-unit-test",
+      "config": "without_skill",
+      "pass_rate": 1.0,
+      "timing": {
+        "total_tokens": 20201,
+        "duration_ms": 197701
+      }
+    }
+  ],
+  "aggregate": {
+    "with_skill": {
+      "mean_pass_rate": 1.0,
+      "mean_tokens": 22531.3,
+      "mean_duration_ms": 137907.3
+    },
+    "without_skill": {
+      "mean_pass_rate": 0.7,
+      "mean_tokens": 17856.0,
+      "mean_duration_ms": 153785.0
+    },
+    "delta": {
+      "pass_rate": "+0.3",
+      "tokens": "+4675",
+      "duration_ms": "-15878"
+    }
+  },
+  "analyst_observations": [
+    "Eval 0 (组件审查): with_skill 明显优于 baseline，因为文件不存在时 with_skill 提供了完整的规范指导",
+    "Eval 1 (Pinia Store): 两者质量相当，都提供了完整的类型定义和 store 实现",
+    "Eval 2 (Vitest测试): 两者质量相当，但 with_skill 包含了完整的 usePagination 实现和测试代码，baseline 只提供测试代码",
+    "with_skill 平均通过率 100%，without_skill 平均通过率 70%（因文件不存在导致 0%）",
+    "with_skill 平均 token 消耗略高，但执行时间更短"
+  ]
+}

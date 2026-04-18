@@ -1,0 +1,37 @@
+{
+  "eval_id": 2,
+  "eval_name": "vitest-unit-test",
+  "prompt": "为一个订单列表页面编写 Vitest 单元测试用例，测试 usePagination composable 的分页加载、重置功能",
+  "assertions": [
+    {
+      "text": "测试文件命名规范 (*.spec.ts)",
+      "passed": false,
+      "evidence": ""
+    },
+    {
+      "text": "使用 describe/it 结构",
+      "passed": false,
+      "evidence": ""
+    },
+    {
+      "text": "包含正常流程测试",
+      "passed": false,
+      "evidence": ""
+    },
+    {
+      "text": "包含异常情况测试",
+      "passed": false,
+      "evidence": ""
+    },
+    {
+      "text": "使用 async/await 测试异步",
+      "passed": false,
+      "evidence": ""
+    },
+    {
+      "text": "使用 vitest 提供的 mock 函数",
+      "passed": false,
+      "evidence": ""
+    }
+  ]
+}

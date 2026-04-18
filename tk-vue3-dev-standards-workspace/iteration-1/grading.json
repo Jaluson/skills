@@ -1,0 +1,234 @@
+{
+  "eval-0-with_skill": {
+    "run_id": "eval-0-with_skill",
+    "config": "with_skill",
+    "eval_name": "vue-component-review",
+    "timing": {
+      "total_tokens": 20439,
+      "duration_ms": 171991
+    },
+    "grades": [
+      {
+        "text": "包含 TypeScript 类型定义",
+        "passed": true,
+        "evidence": "提供了完整的 TypeScript 类型定义示例 (User interface)"
+      },
+      {
+        "text": "使用 Composition API",
+        "passed": true,
+        "evidence": "使用 <script setup lang=\"ts\"> 和 Composition API"
+      },
+      {
+        "text": "Props 定义规范",
+        "passed": true,
+        "evidence": "使用 defineProps<T> 泛型定义"
+      },
+      {
+        "text": "Emits 定义规范",
+        "passed": true,
+        "evidence": "使用 defineEmits<T> 泛型定义"
+      },
+      {
+        "text": "使用 scoped 样式",
+        "passed": true,
+        "evidence": "使用 <style scoped> 和 BEM 命名"
+      }
+    ],
+    "summary": "5/5 通过"
+  },
+  "eval-0-without_skill": {
+    "run_id": "eval-0-without_skill",
+    "config": "without_skill",
+    "eval_name": "vue-component-review",
+    "timing": {
+      "total_tokens": 17694,
+      "duration_ms": 192090
+    },
+    "grades": [
+      {
+        "text": "包含 TypeScript 类型定义",
+        "passed": false,
+        "evidence": "文件不存在，无法审查实际代码"
+      },
+      {
+        "text": "使用 Composition API",
+        "passed": false,
+        "evidence": "文件不存在，无法审查"
+      },
+      {
+        "text": "Props 定义规范",
+        "passed": false,
+        "evidence": "文件不存在，无法审查"
+      },
+      {
+        "text": "Emits 定义规范",
+        "passed": false,
+        "evidence": "文件不存在，无法审查"
+      },
+      {
+        "text": "使用 scoped 样式",
+        "passed": false,
+        "evidence": "文件不存在，无法审查"
+      }
+    ],
+    "summary": "0/5 通过"
+  },
+  "eval-1-with_skill": {
+    "run_id": "eval-1-with_skill",
+    "config": "with_skill",
+    "eval_name": "pinia-store-design",
+    "timing": {
+      "total_tokens": 16158,
+      "duration_ms": 70155
+    },
+    "grades": [
+      {
+        "text": "有完整的 TypeScript 类型定义",
+        "passed": true,
+        "evidence": "包含 UserInfo, LoginDTO, LoginResponse, UserStatus, UserRole 等类型"
+      },
+      {
+        "text": "使用 setup store 语法",
+        "passed": true,
+        "evidence": "使用 defineStore('user', () => { ... }) 语法"
+      },
+      {
+        "text": "包含 State、Getters、Actions",
+        "passed": true,
+        "evidence": "State: userInfo/token/loading, Getters: isLoggedIn/displayName/avatar/isAdmin/userRole, Actions: login/fetchUserInfo/logout"
+      },
+      {
+        "text": "Actions 是 async 函数",
+        "passed": true,
+        "evidence": "login, fetchUserInfo, logout 都是 async 函数"
+      },
+      {
+        "text": "Getters 使用 computed",
+        "passed": true,
+        "evidence": "所有 getters 都使用 computed() 包装"
+      }
+    ],
+    "summary": "5/5 通过"
+  },
+  "eval-1-without_skill": {
+    "run_id": "eval-1-without_skill",
+    "config": "without_skill",
+    "eval_name": "pinia-store-design",
+    "timing": {
+      "total_tokens": 15673,
+      "duration_ms": 71564
+    },
+    "grades": [
+      {
+        "text": "有完整的 TypeScript 类型定义",
+        "passed": true,
+        "evidence": "包含 UserInfo, LoginParams, LoginResult, GetUserInfoResult, UserState 等类型"
+      },
+      {
+        "text": "使用 setup store 语法",
+        "passed": true,
+        "evidence": "使用 defineStore<UserState, UserStoreGetters, UserStoreActions> 语法"
+      },
+      {
+        "text": "包含 State、Getters、Actions",
+        "passed": true,
+        "evidence": "State: userInfo/accessToken/refreshToken/isLoggedIn/permissions/roles/loading, Getters: isLogin/username/nickname/hasPermission/hasRole"
+      },
+      {
+        "text": "Actions 是 async 函数",
+        "passed": true,
+        "evidence": "login, getUserInfo, logout 都是 async 函数"
+      },
+      {
+        "text": "Getters 使用 computed",
+        "passed": true,
+        "evidence": "所有 getters 都使用 computed() 包装"
+      }
+    ],
+    "summary": "5/5 通过"
+  },
+  "eval-2-with_skill": {
+    "run_id": "eval-2-with_skill",
+    "config": "with_skill",
+    "eval_name": "vitest-unit-test",
+    "timing": {
+      "total_tokens": 30997,
+      "duration_ms": 171576
+    },
+    "grades": [
+      {
+        "text": "测试文件命名规范 (*.spec.ts)",
+        "passed": true,
+        "evidence": "文件名为 usePagination.spec.ts"
+      },
+      {
+        "text": "使用 describe/it 结构",
+        "passed": true,
+        "evidence": "使用 describe('usePagination', ...) 和 it('...') 结构"
+      },
+      {
+        "text": "包含正常流程测试",
+        "passed": true,
+        "evidence": "包含初始化测试、分页加载测试、重置功能测试"
+      },
+      {
+        "text": "包含异常情况测试",
+        "passed": true,
+        "evidence": "包含异常情况处理测试组：加载失败、空数据列表"
+      },
+      {
+        "text": "使用 async/await 测试异步",
+        "passed": true,
+        "evidence": "所有测试异步操作的用例都使用 async/await"
+      },
+      {
+        "text": "使用 vitest 提供的 mock 函数",
+        "passed": true,
+        "evidence": "使用 vi.fn(), mockReset(), mockResolvedValue(), mockRejectedValue()"
+      }
+    ],
+    "summary": "6/6 通过"
+  },
+  "eval-2-without_skill": {
+    "run_id": "eval-2-without_skill",
+    "config": "without_skill",
+    "eval_name": "vitest-unit-test",
+    "timing": {
+      "total_tokens": 20201,
+      "duration_ms": 197701
+    },
+    "grades": [
+      {
+        "text": "测试文件命名规范 (*.spec.ts)",
+        "passed": true,
+        "evidence": "文件名为 usePagination.spec.ts"
+      },
+      {
+        "text": "使用 describe/it 结构",
+        "passed": true,
+        "evidence": "使用 describe('usePagination', ...) 和 it('...') 结构"
+      },
+      {
+        "text": "包含正常流程测试",
+        "passed": true,
+        "evidence": "包含分页状态初始化、下一页/上一页、跳页、重置功能测试"
+      },
+      {
+        "text": "包含异常情况测试",
+        "passed": true,
+        "evidence": "包含边界条件测试：除零保护、大数据计算"
+      },
+      {
+        "text": "使用 async/await 测试异步",
+        "passed": true,
+        "evidence": "集成测试用例使用异步调用模式"
+      },
+      {
+        "text": "使用 vitest 提供的 mock 函数",
+        "passed": true,
+        "evidence": "测试用例使用 vi.fn() 模式"
+      }
+    ],
+    "summary": "6/6 通过"
+  }
+}

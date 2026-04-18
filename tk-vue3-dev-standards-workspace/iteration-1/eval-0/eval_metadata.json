@@ -1,0 +1,32 @@
+{
+  "eval_id": 0,
+  "eval_name": "vue-component-review",
+  "prompt": "审查这个 Vue 3 组件的代码质量问题：组件文件在 src/components/UserCard.vue，包含用户卡片展示、用户列表渲染、删除和确认操作",
+  "assertions": [
+    {
+      "text": "包含 TypeScript 类型定义",
+      "passed": false,
+      "evidence": ""
+    },
+    {
+      "text": "使用 Composition API",
+      "passed": false,
+      "evidence": ""
+    },
+    {
+      "text": "Props 定义规范",
+      "passed": false,
+      "evidence": ""
+    },
+    {
+      "text": "Emits 定义规范",
+      "passed": false,
+      "evidence": ""
+    },
+    {
+      "text": "使用 scoped 样式",
+      "passed": false,
+      "evidence": ""
+    }
+  ]
+}
